@@ -6,8 +6,7 @@ This script recursively scans a project directory, reads the content of specifie
 file types, and uses Google's Generative AI to identify potential security
 vulnerabilities and suggest fixes.
 
-This version includes a robust JSON parsing and retry mechanism to handle
-potential inconsistencies in the AI's output.
+This version generates a final report in a human-readable Markdown file.
 
 Author: Doll
 Date: 2025-08-22
@@ -34,6 +33,9 @@ PROJECT_PATH = "./"
 # 'gemini-1.5-flash' is fast and capable. 'gemini-pro' is another solid option.
 AI_MODEL = "gemini-2.5-flash"
 
+# The name of the output Markdown report file.
+REPORT_FILENAME = "vulnerability_report.md"
+
 # Number of times to retry calling the AI if JSON parsing fails.
 MAX_RETRIES = 3
 
@@ -57,9 +59,9 @@ def configure_google_ai() -> None:
     Configures the Google Generative AI client with the API key.
     Exits the script if the API key is not provided.
     """
-    if GOOGLE_API_KEY == "YOUR_GOOGLE_AI_API_KEY" or not GOOGLE_API_KEY:
+    if GOOGLE_API_KEY == "api-key-here" or not GOOGLE_API_KEY:
         print("Error: Google AI API key is not configured.")
-        print("Please replace 'YOUR_GOOGLE_AI_API_KEY' with your actual key.")
+        print("Please replace 'api-key-here' with your actual key.")
         exit(1)
     try:
         genai.configure(api_key=GOOGLE_API_KEY)
@@ -160,6 +162,47 @@ def analyze_code_with_ai(file_path: str, file_content: str) -> Dict[str, Any]:
             
     return {"error": "AI analysis failed after all retries."}
 
+def generate_markdown_report(all_found_issues: List[Dict[str, Any]]) -> str:
+    """
+    Generates a Markdown formatted string from the list of found issues.
+
+    Args:
+        all_found_issues: A list of dictionaries, where each dictionary
+                          represents a found vulnerability.
+
+    Returns:
+        A string containing the full report in Markdown format.
+    """
+    report_parts = ["# AI-Powered Code Vulnerability Scan Report\n\n"]
+    
+    if not all_found_issues:
+        report_parts.append("## Scan Complete\n\n")
+        report_parts.append("**Excellent! The AI found no vulnerabilities in the scanned files.**\n")
+        return "".join(report_parts)
+
+    report_parts.append(f"## Scan Summary\n\n")
+    report_parts.append(f"Found **{len(all_found_issues)}** total potential issues.\n\n")
+    report_parts.append("---\n\n")
+
+    for i, issue in enumerate(all_found_issues, 1):
+        report_parts.append(f"## Issue {i}: {issue.get('vulnerability_type', 'N/A')}\n\n")
+        report_parts.append(f"**File:** `{issue['file_path']}`\n")
+        report_parts.append(f"**Line:** {issue.get('line_number', 'N/A')}\n")
+        report_parts.append(f"**Vulnerability:** {issue.get('vulnerability_type', 'N/A')}\n\n")
+        
+        report_parts.append("### Explanation\n")
+        report_parts.append(f"{issue.get('explanation', 'Not provided.')}\n\n")
+        
+        report_parts.append("### Suggested Fix\n")
+        # Ensure the suggested fix is formatted as a code block
+        fix = issue.get('suggested_fix', 'Not provided.')
+        if "```" not in fix:
+            fix = f"```\n{fix}\n```"
+        report_parts.append(f"{fix}\n\n")
+        report_parts.append("---\n\n")
+        
+    return "".join(report_parts)
+
 def main() -> None:
     """
     Main function to orchestrate the code scanning and reporting process.
@@ -207,23 +250,17 @@ def main() -> None:
         except Exception as e:
             print(f"  [-] Failed to read or process file {file_path}: {e}")
 
-    # --- Final Report ---
-    if not all_found_issues:
-        print("\n--- Scan Complete ---")
-        print("[+] Excellent! The AI found no vulnerabilities in the scanned files.")
-        return
+    # --- Generate and Save Final Report ---
+    print("\n--- Generating Report ---")
+    markdown_content = generate_markdown_report(all_found_issues)
+    
+    try:
+        with open(REPORT_FILENAME, 'w', encoding='utf-8') as f:
+            f.write(markdown_content)
+        print(f"\n[+] Scan complete. Report successfully saved to '{REPORT_FILENAME}'")
+    except IOError as e:
+        print(f"\n[-] Error: Could not write report to file '{REPORT_FILENAME}': {e}")
 
-    print(f"\n--- Scan Complete: Found {len(all_found_issues)} Total Potential Issues ---")
-    for i, issue in enumerate(all_found_issues, 1):
-        print(f"\n--- Issue {i}/{len(all_found_issues)} ---")
-        print(f"File:               {issue['file_path']}")
-        print(f"Line:               {issue.get('line_number', 'N/A')}")
-        print(f"Vulnerability:      {issue.get('vulnerability_type', 'N/A')}")
-        print("\n[+] Explanation:")
-        print(issue.get('explanation', 'Not provided.'))
-        print("\n[+] Suggested Fix:")
-        print(issue.get('suggested_fix', 'Not provided.'))
-        print("-" * 60)
 
 if __name__ == "__main__":
     main()
