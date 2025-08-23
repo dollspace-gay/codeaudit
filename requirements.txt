@@ -1,0 +1,4 @@
+# This file lists the Python packages required to run the AI code scanner.
+# Install them using the command: pip install -r requirements.txt
+
+google-generativeai
