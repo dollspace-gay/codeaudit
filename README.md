@@ -37,7 +37,6 @@ Clone this repository or simply download the `codeaudit.py` and `requirements.tx
 
 It's highly recommended to use a virtual environment to keep project dependencies isolated.
 
-```bash
 # Navigate to your project directory
 cd /path/to/your/scanner
 
@@ -67,8 +66,10 @@ On Windows (Command Prompt):```bash set GOOGLE_API_KEY="YOUR_API_KEY_HERE"
 You will also need to modify one line in `codeaudit.py` to tell it to read this environment variable.
 
 *Change this line:*
-```python
+
+
 GOOGLE_API_KEY = "api-key-here"
+
 To this:
 import os
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
@@ -77,8 +78,8 @@ GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 ⚙️ Configuration
 You can customize the scanner's behavior by editing the configuration variables at the top of the codeaudit.py script.
 SCAN_PATHS: The most important setting. This is a list of paths to scan. You can mix and match directories and files.
-code
-Python
+
+
 # Example: Scan a whole project, a specific folder, and one file
 SCAN_PATHS = [
     "./my-web-app/",
@@ -124,6 +125,9 @@ cursor.execute("SELECT * FROM users WHERE username = %s;", (username,))
 
 ⚠️ Important Considerations
 Security: Never commit your API key directly into your source code or share it publicly. Use environment variables as recommended.
+
 Cost: API calls to Google's AI models are not free. Be mindful of the number and size of files you are scanning, as this will directly impact your costs.
+
 Not a Replacement: This tool is a powerful aid for identifying potential security issues. It is not a substitute for professional human code reviews, thorough security audits, or established static analysis (SAST) tools.
+
 False Positives/Negatives: Generative AI is not perfect. It may occasionally miss a vulnerability (a false negative) or flag safe code as vulnerable (a false positive). Always use the results as a starting point for your own investigation.
