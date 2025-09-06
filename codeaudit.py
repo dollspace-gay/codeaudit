@@ -1,266 +1,296 @@
-# -*- coding-utf-8 -*-
+#!/usr/bin/env python3
 """
-AI-Powered Code Vulnerability Scanner using Google's Generative AI
-
-This script recursively scans a project directory, reads the content of specified
-file types, and uses Google's Generative AI to identify potential security
-vulnerabilities and suggest fixes.
-
-This version generates a final report in a human-readable Markdown file.
-
-Author: Doll
-Date: 2025-08-22
+AI-Powered Code Analyzer using Google Gemini
+Detects bugs, performance issues, and code smells in your codebase
 """
 
 import os
-import re
+import sys
+import argparse
 import json
-import time
+from pathlib import Path
+from typing import List, Dict, Any
 import google.generativeai as genai
-from typing import List, Dict, Any, Generator
+from google.generativeai.types import generation_types
+from colorama import init, Fore, Style
 
-# --- Configuration ---
+# Initialize colorama for cross-platform colored output
+init()
 
-# IMPORTANT: Replace with your actual Google AI API key.
-# It is strongly recommended to use environment variables for production.
-GOOGLE_API_KEY = "api-key-here"
+# Define a constant for the maximum file size to analyze
+MAX_FILE_SIZE_MB = 1
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
-# The path to the project codebase you want to scan.
-# "." refers to the current directory where the script is run.
-PROJECT_PATH = "./"
-
-# The generative AI model to use for analysis.
-# 'gemini-1.5-flash' is fast and capable. 'gemini-pro' is another solid option.
-AI_MODEL = "gemini-2.5-flash"
-
-# The name of the output Markdown report file.
-REPORT_FILENAME = "vulnerability_report.md"
-
-# Number of times to retry calling the AI if JSON parsing fails.
-MAX_RETRIES = 3
-
-# List of file extensions to include in the scan.
-# Add or remove extensions based on your project's technology stack.
-FILES_TO_SCAN = [
-    ".py", ".js", ".java", ".go", ".rb", ".php", ".ts", ".html",
-    ".cs", ".c", ".cpp", ".sh", ".yaml", ".yml", ".tf", ".json"
-]
-
-# List of directories to exclude from the scan.
-DIRS_TO_EXCLUDE = [
-    "node_modules", ".git", "venv", "__pycache__", "dist", "build",
-    "target", ".vscode", ".idea", "docs", "test", "tests", "bin", "obj"
-]
-
-# --- Main Script Logic ---
-
-def configure_google_ai() -> None:
-    """
-    Configures the Google Generative AI client with the API key.
-    Exits the script if the API key is not provided.
-    """
-    if GOOGLE_API_KEY == "api-key-here" or not GOOGLE_API_KEY:
-        print("Error: Google AI API key is not configured.")
-        print("Please replace 'api-key-here' with your actual key.")
-        exit(1)
-    try:
-        genai.configure(api_key=GOOGLE_API_KEY)
-    except Exception as e:
-        print(f"Error configuring Google AI client: {e}")
-        exit(1)
-
-def find_code_files(path: str) -> Generator[str, None, None]:
-    """
-    Finds all code files in a directory that match the specified extensions,
-    excluding specified directories.
-
-    Args:
-        path: The root directory to start scanning from.
-
-    Yields:
-        The full path to each code file found.
-    """
-    for root, dirs, files in os.walk(path):
-        # Modify the dir list in-place to prevent os.walk from traversing them
-        dirs[:] = [d for d in dirs if d not in DIRS_TO_EXCLUDE]
-
-        for file in files:
-            if any(file.endswith(ext) for ext in FILES_TO_SCAN):
-                yield os.path.join(root, file)
-
-def extract_json_from_text(text: str) -> str:
-    """
-    Extracts a JSON object from a string, even if it's embedded in
-    markdown code blocks or other text.
-    """
-    # Look for JSON within ```json ... ``` markdown block
-    match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if match:
-        return match.group(1)
-
-    # If no markdown block, find the first '{' and last '}'
-    start_index = text.find('{')
-    end_index = text.rfind('}')
-    if start_index != -1 and end_index != -1 and end_index > start_index:
-        return text[start_index:end_index+1]
-    
-    # Fallback to returning the original text if no clear JSON is found
-    return text
-
-def analyze_code_with_ai(file_path: str, file_content: str) -> Dict[str, Any]:
-    """
-    Sends code to Google's Generative AI for analysis with a retry mechanism.
-
-    Args:
-        file_path: The path to the file being analyzed (for context).
-        file_content: The actual source code to analyze.
-
-    Returns:
-        A dictionary containing the AI's analysis results or an error message.
-    """
-    model = genai.GenerativeModel(AI_MODEL)
-    
-    prompt = f"""
-    You are an expert cybersecurity analyst. Your task is to perform a security audit on the following source code and respond ONLY with a valid JSON object. Do not include any introductory text or markdown formatting around the JSON.
-
-    File Path: {file_path}
-
-    Instructions:
-    1.  Thoroughly analyze the code for security vulnerabilities (e.g., SQL Injection, XSS, Hardcoded Secrets, Command Injection, etc.).
-    2.  Respond with a JSON object containing a single key: "vulnerabilities".
-    3.  The "vulnerabilities" key should map to a list of objects. Each object represents one vulnerability found.
-    4.  Each vulnerability object must have these exact keys: "line_number" (integer), "vulnerability_type" (string), "explanation" (string), and "suggested_fix" (string containing a code block or detailed steps).
-    5.  If no vulnerabilities are found, return a JSON object with an empty list: {{"vulnerabilities": []}}.
-
-    Source Code to Analyze:
-    ```
-    {file_content}
-    ```
-    """
-    
-    for attempt in range(MAX_RETRIES):
+class CodeAnalyzer:
+    def __init__(self):
+        """Initialize the code analyzer with Gemini AI"""
         try:
-            print(f"[*] Analyzing {file_path} with AI (Attempt {attempt + 1}/{MAX_RETRIES})...")
-            response = model.generate_content(prompt)
-            raw_text = response.text
+            api_key = os.getenv('GEMINI_API_KEY')
+            if not api_key:
+                print(f"{Fore.RED}Error: GEMINI_API_KEY environment variable not found.{Style.RESET_ALL}")
+                sys.exit(1)
             
-            json_string = extract_json_from_text(raw_text)
-            
-            return json.loads(json_string)
-            
-        except json.JSONDecodeError:
-            print(f"  [!] Failed to decode JSON from AI response on attempt {attempt + 1}.")
-            if attempt == MAX_RETRIES - 1:
-                print(f"  [!] Exhausted all retries for {file_path}.")
-                print(f"  [!] Last Raw AI Response:\n---\n{raw_text}\n---")
-                return {"error": "Failed to decode JSON from AI after multiple retries."}
-            time.sleep(2) # Wait for 2 seconds before retrying
-            
+            genai.configure(api_key=api_key)
+
+            # Use GenerationConfig to enforce JSON output for reliability
+            self.generation_config = genai.GenerationConfig(
+                response_mime_type="application/json"
+            )
+            self.model = genai.GenerativeModel(
+                'gemini-2.5-flash',
+                generation_config=self.generation_config
+            )
+
         except Exception as e:
-            print(f"  [!] An unexpected error occurred during AI analysis: {e}")
-            return {"error": str(e)}
-            
-    return {"error": "AI analysis failed after all retries."}
-
-def generate_markdown_report(all_found_issues: List[Dict[str, Any]]) -> str:
-    """
-    Generates a Markdown formatted string from the list of found issues.
-
-    Args:
-        all_found_issues: A list of dictionaries, where each dictionary
-                          represents a found vulnerability.
-
-    Returns:
-        A string containing the full report in Markdown format.
-    """
-    report_parts = ["# AI-Powered Code Vulnerability Scan Report\n\n"]
+            print(f"{Fore.RED}Error configuring the Gemini API: {e}{Style.RESET_ALL}")
+            sys.exit(1)
+        
+        self.supported_extensions = {
+            '.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.cpp', '.c', '.cs', 
+            '.go', '.rs', '.php', '.rb', '.swift', '.kt', '.scala', '.dart'
+        }
+        
+    def get_files_to_analyze(self, path: str, recursive: bool = True) -> List[Path]:
+        """Get all code files in the specified path, respecting ignore patterns."""
+        path_obj = Path(path)
+        files = []
+        
+        ignored_dirs = {'.git', 'node_modules', '__pycache__', 'build', 'dist', 'target'}
+        
+        if path_obj.is_file():
+            if path_obj.suffix in self.supported_extensions:
+                files.append(path_obj)
+        elif path_obj.is_dir():
+            pattern = "**/*" if recursive else "*"
+            for file in path_obj.glob(pattern):
+                if file.is_file() and file.suffix in self.supported_extensions:
+                    if not any(part in ignored_dirs or part.startswith('.') for part in file.parts):
+                        files.append(file)
+        
+        return files
     
-    if not all_found_issues:
-        report_parts.append("## Scan Complete\n\n")
-        report_parts.append("**Excellent! The AI found no vulnerabilities in the scanned files.**\n")
-        return "".join(report_parts)
-
-    report_parts.append(f"## Scan Summary\n\n")
-    report_parts.append(f"Found **{len(all_found_issues)}** total potential issues.\n\n")
-    report_parts.append("---\n\n")
-
-    for i, issue in enumerate(all_found_issues, 1):
-        report_parts.append(f"## Issue {i}: {issue.get('vulnerability_type', 'N/A')}\n\n")
-        report_parts.append(f"**File:** `{issue['file_path']}`\n")
-        report_parts.append(f"**Line:** {issue.get('line_number', 'N/A')}\n")
-        report_parts.append(f"**Vulnerability:** {issue.get('vulnerability_type', 'N/A')}\n\n")
-        
-        report_parts.append("### Explanation\n")
-        report_parts.append(f"{issue.get('explanation', 'Not provided.')}\n\n")
-        
-        report_parts.append("### Suggested Fix\n")
-        # Ensure the suggested fix is formatted as a code block
-        fix = issue.get('suggested_fix', 'Not provided.')
-        if "```" not in fix:
-            fix = f"```\n{fix}\n```"
-        report_parts.append(f"{fix}\n\n")
-        report_parts.append("---\n\n")
-        
-    return "".join(report_parts)
-
-def main() -> None:
-    """
-    Main function to orchestrate the code scanning and reporting process.
-    """
-    print("--- AI-Powered Code Vulnerability Scanner ---")
-    configure_google_ai()
-
-    if not os.path.isdir(PROJECT_PATH):
-        print(f"Error: Project path '{PROJECT_PATH}' is not a valid directory.")
-        return
-
-    all_found_issues: List[Dict[str, Any]] = []
-    files_to_scan = list(find_code_files(PROJECT_PATH))
-
-    if not files_to_scan:
-        print(f"No files matching the specified extensions found in '{PROJECT_PATH}'.")
-        return
-
-    print(f"[+] Found {len(files_to_scan)} files to scan.")
-
-    for file_path in files_to_scan:
+    def analyze_code_file(self, file_path: Path) -> Dict[str, Any]:
+        """Analyze a single code file for bugs and issues."""
         try:
+            # Add file size check to prevent Denial of Service
+            file_size = file_path.stat().st_size
+            if file_size > MAX_FILE_SIZE_BYTES:
+                return {
+                    'file': str(file_path),
+                    'error': f"File skipped: Exceeds size limit of {MAX_FILE_SIZE_MB}MB.",
+                    'issues': []
+                }
+            
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                content = f.read()
-
-            if not content.strip():
-                print(f"[*] Skipping empty file: {file_path}")
-                continue
-
-            analysis_result = analyze_code_with_ai(file_path, content)
-
-            if "error" in analysis_result:
-                print(f"  [-] Could not process {file_path}: {analysis_result['error']}")
-                continue
-
-            vulnerabilities = analysis_result.get("vulnerabilities", [])
-            if vulnerabilities:
-                print(f"  [!] Found {len(vulnerabilities)} potential issues in {file_path}")
-                for issue in vulnerabilities:
-                    issue['file_path'] = file_path
-                    all_found_issues.append(issue)
-            else:
-                print(f"  [+] No issues found in {file_path}")
+                code_content = f.read()
 
         except Exception as e:
-            print(f"  [-] Failed to read or process file {file_path}: {e}")
+            return {
+                'file': str(file_path),
+                'error': f"Could not read file: {e}",
+                'issues': []
+            }
+        
+        prompt = f"""
+You are an expert code reviewer and static analysis tool. Analyze the following code for:
+1. **Security Vulnerabilities**: SQL Injection, XSS, insecure deserialization, etc.
+2. **Potential Bugs**: Null pointer exceptions, race conditions, off-by-one errors.
+3. **Performance Issues**: Inefficient algorithms (O(n²)), unnecessary loops.
+4. **Code Smells**: Long functions, duplicate code, high complexity, magic numbers.
 
-    # --- Generate and Save Final Report ---
-    print("\n--- Generating Report ---")
-    markdown_content = generate_markdown_report(all_found_issues)
+The output MUST be a single, valid JSON object following the schema below. Do not include any text or markdown formatting before or after the JSON.
+
+File: {file_path.name}
+Language: {file_path.suffix[1:]}
+Code:
+{code_content}
+
+JSON Schema:
+{{
+    "issues": [
+        {{
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description of the issue.",
+            "suggestion": "Specific refactoring suggestion with a code example if applicable."
+        }}
+    ],
+    "summary": {{
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "A score from 1 (poor) to 10 (excellent) with a brief one-sentence explanation."
+    }}
+}}
+"""
+
+        try:
+            response = self.model.generate_content(prompt)
+            # With response_mime_type="application/json", response.text is a clean JSON string.
+            analysis = json.loads(response.text)
+            analysis['file'] = str(file_path)
+            return analysis
+
+        except json.JSONDecodeError:
+            return {
+                'file': str(file_path),
+                'error': 'Failed to parse AI response as JSON despite requesting JSON format.',
+                'raw_response': response.text[:1000] if 'response' in locals() else "No response received",
+                'issues': []
+            }
+        except generation_types.BlockedPromptError:
+             return {
+                'file': str(file_path),
+                'error': 'AI analysis blocked. The prompt may contain sensitive content.',
+                'issues': []
+            }
+        except Exception as e:
+            return {
+                'file': str(file_path),
+                'error': f"AI analysis failed: {e}",
+                'issues': []
+            }
     
-    try:
-        with open(REPORT_FILENAME, 'w', encoding='utf-8') as f:
-            f.write(markdown_content)
-        print(f"\n[+] Scan complete. Report successfully saved to '{REPORT_FILENAME}'")
-    except IOError as e:
-        print(f"\n[-] Error: Could not write report to file '{REPORT_FILENAME}': {e}")
+    def print_analysis_results(self, results: List[Dict[str, Any]]):
+        """Print formatted analysis results"""
+        total_files = len(results)
+        total_issues = sum(len(result.get('issues', [])) for result in results)
+        
+        print(f"\n{Fore.CYAN}{'='*60}")
+        print(f"CODE ANALYSIS COMPLETE")
+        print(f"{'='*60}{Style.RESET_ALL}")
+        
+        print(f"\n📊 {Fore.YELLOW}Summary:{Style.RESET_ALL}")
+        print(f"   Files analyzed: {total_files}")
+        print(f"   Total issues found: {total_issues}")
+        
+        severity_counts = {'high': 0, 'medium': 0, 'low': 0}
+        for result in results:
+            for issue in result.get('issues', []):
+                severity = issue.get('severity', 'medium')
+                severity_counts.setdefault(severity, 0)
+                severity_counts[severity] += 1
+        
+        print(f"   🔴 High severity: {severity_counts.get('high', 0)}")
+        print(f"   🟡 Medium severity: {severity_counts.get('medium', 0)}")
+        print(f"   🟢 Low severity: {severity_counts.get('low', 0)}")
+        
+        for result in results:
+            file_str = result.get('file', 'Unknown file')
+            if result.get('error'):
+                print(f"\n❌ {Fore.RED}{file_str}: {result['error']}{Style.RESET_ALL}")
+                if 'raw_response' in result:
+                    print(f"{Fore.YELLOW}   Raw Response Snippet: {result['raw_response']}{Style.RESET_ALL}")
+                continue
+                
+            issues = result.get('issues', [])
+            if not issues:
+                print(f"\n✅ {Fore.GREEN}{file_str}: No issues found{Style.RESET_ALL}")
+                continue
+            
+            print(f"\n📁 {Fore.CYAN}{file_str}{Style.RESET_ALL}")
+            
+            if 'summary' in result:
+                summary = result['summary']
+                print(f"   📈 Maintainability: {summary.get('maintainability_score', 'N/A')}")
+            
+            for issue in issues:
+                severity = issue.get('severity', 'medium')
+                line = issue.get('line', 'N/A')
+                description = issue.get('description', 'No description')
+                suggestion = issue.get('suggestion', 'No suggestion')
+                severity_color = Fore.RED if severity == 'high' else Fore.YELLOW if severity == 'medium' else Fore.GREEN
+                
+                print(f"    - Line {line}: {severity_color}[{severity.upper()}]{Style.RESET_ALL} {description}")
+                print(f"      💡 {Fore.CYAN}{suggestion}{Style.RESET_ALL}")
 
+    def save_results_json(self, results: List[Dict[str, Any]], output_file: Path):
+        """Save analysis results to JSON file"""
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(results, f, indent=2, ensure_ascii=False)
+            print(f"\n💾 Results saved to: {output_file}")
+        except Exception as e:
+            print(f"\n{Fore.RED}Error saving results to {output_file}: {e}{Style.RESET_ALL}")
+
+def validate_output_path(output_path_str: str) -> Path:
+    """Validate the output path to prevent directory traversal and overwrites."""
+    if not output_path_str:
+        return None
+
+    path = Path(output_path_str).resolve()
+    cwd = Path.cwd().resolve()
+    
+    if cwd not in path.parents and path.parent != cwd:
+        print(f"{Fore.RED}Error: Output path '{output_path_str}' is outside the current directory tree.{Style.RESET_ALL}")
+        sys.exit(1)
+    
+    if path.exists() and path.is_file():
+        overwrite = input(f"{Fore.YELLOW}Warning: Output file '{path}' already exists. Overwrite? (y/N): {Style.RESET_ALL}").lower()
+        if overwrite != 'y':
+            print("Aborted.")
+            sys.exit(0)
+            
+    return path
+
+def main():
+    # --- FIX: Restored the complete and correct argparse setup ---
+    parser = argparse.ArgumentParser(
+        description='AI-Powered Code Analyzer for Bug Detection and Refactoring',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python code_analyzer.py .                    # Analyze current directory
+  python code_analyzer.py ../server            # Analyze specific directory  
+  python code_analyzer.py app.py               # Analyze single file
+  python code_analyzer.py . --output report.json  # Save results to JSON
+        """
+    )
+    
+    parser.add_argument('path', nargs='?', default='.', 
+                       help='Path to analyze (file or directory, default: current directory)')
+    parser.add_argument('--recursive', '-r', action='store_true', default=True,
+                       help='Recursively analyze subdirectories (default: True)')
+    parser.add_argument('--output', '-o', type=str,
+                       help='Save results to JSON file')
+    parser.add_argument('--max-files', type=int, default=20,
+                       help='Maximum number of files to analyze (default: 20)')
+    
+    args = parser.parse_args()
+    
+    validated_output_path = validate_output_path(args.output)
+    
+    print(f"{Fore.CYAN}🔍 AI-Powered Code Analyzer{Style.RESET_ALL}")
+    print(f"Analyzing path: {args.path}")
+    
+    analyzer = CodeAnalyzer()
+    files = analyzer.get_files_to_analyze(args.path, args.recursive)
+    
+    if not files:
+        print(f"{Fore.YELLOW}No supported code files found in: {args.path}{Style.RESET_ALL}")
+        return
+    
+    if len(files) > args.max_files:
+        print(f"{Fore.YELLOW}Found {len(files)} files, analyzing first {args.max_files} (use --max-files to change){Style.RESET_ALL}")
+        files = files[:args.max_files]
+    
+    print(f"Files to analyze: {len(files)}")
+    
+    results = []
+    for i, file_path in enumerate(files, 1):
+        sys.stdout.write(f"\r🔍 Analyzing {i}/{len(files)}: {file_path.name}{' ' * 20}")
+        sys.stdout.flush()
+        result = analyzer.analyze_code_file(file_path)
+        results.append(result)
+    
+    sys.stdout.write("\n")
+    
+    analyzer.print_analysis_results(results)
+    
+    if validated_output_path:
+        analyzer.save_results_json(results, validated_output_path)
 
 if __name__ == "__main__":
     main()
