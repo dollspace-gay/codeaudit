@@ -58,21 +58,21 @@ pip install -r requirements.txt
 The most secure way to handle your API key is to use an environment variable.
 On macOS/Linux:
 
-export GOOGLE_API_KEY="YOUR_API_KEY_HERE"
+export GEMINI_API_KEY="YOUR_API_KEY_HERE"
 
 (To make this permanent, add the line to your ~/.bashrc, ~/.zshrc, or other shell profile file.)
-On Windows (Command Prompt):```bash set GOOGLE_API_KEY="YOUR_API_KEY_HERE"
+On Windows (Command Prompt):```bash set GEMINI_API_KEY="YOUR_API_KEY_HERE"
 
 You will also need to modify one line in `codeaudit.py` to tell it to read this environment variable.
 
 *Change this line:*
 
 
-GOOGLE_API_KEY = "api-key-here"
+GEMINI_API_KEY = "api-key-here"
 
 To this:
 import os
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY")
 
 
 ⚙️ Configuration
