@@ -2,3 +2,4 @@
 # Install them using the command: pip install -r requirements.txt
 
 google-generativeai
+colorama
