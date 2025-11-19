@@ -251,7 +251,7 @@ JSON Schema:
                 'raw_response': response.text[:1000] if 'response' in locals() else "No response received",
                 'issues': []
             }
-        except generation_types.BlockedPromptError as e:  # type: ignore[attr-defined]
+        except generation_types.BlockedPromptException as e:
             logger.warning("AI blocked prompt for %s: %s", file_path.name, e)
             return {
                 'file': str(file_path),

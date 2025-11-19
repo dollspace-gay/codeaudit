@@ -129,10 +129,12 @@ class TestFewShotExamples:
 
         assert len(examples_lower) == len(examples_upper) == len(examples_mixed)
 
-    def test_add_custom_example(self):
-        """Test adding a custom example."""
+    def test_add_custom_example_python(self):
+        """Test adding a custom Python example."""
+        initial_count = len(FewShotExamples.PYTHON_EXAMPLES)
+
         custom_example = VulnerabilityExample(
-            title="Custom Vulnerability",
+            title="Custom Python Vulnerability",
             language="python",
             vulnerable_code="os.system(user_input)",
             issue="Command injection",
@@ -141,12 +143,56 @@ class TestFewShotExamples:
             category="security"
         )
 
-        # This should not raise an exception
         FewShotExamples.add_custom_example(custom_example)
 
-        # Note: We're not testing the actual storage since that would require
-        # modifying the class's internal state. This test just ensures the
-        # method is callable and doesn't error.
+        # Verify it was added
+        assert len(FewShotExamples.PYTHON_EXAMPLES) == initial_count + 1
+        assert FewShotExamples.PYTHON_EXAMPLES[-1] == custom_example
+
+        # Clean up
+        FewShotExamples.PYTHON_EXAMPLES.pop()
+
+    def test_add_custom_example_javascript(self):
+        """Test adding a custom JavaScript example."""
+        initial_count = len(FewShotExamples.JAVASCRIPT_EXAMPLES)
+
+        custom_example = VulnerabilityExample(
+            title="Custom JS Vulnerability",
+            language="javascript",
+            vulnerable_code="eval(userInput)",
+            issue="Code injection",
+            fix="Avoid eval, use JSON.parse",
+            severity="high",
+            category="security"
+        )
+
+        FewShotExamples.add_custom_example(custom_example)
+
+        assert len(FewShotExamples.JAVASCRIPT_EXAMPLES) == initial_count + 1
+
+        # Clean up
+        FewShotExamples.JAVASCRIPT_EXAMPLES.pop()
+
+    def test_add_custom_example_java(self):
+        """Test adding a custom Java example."""
+        initial_count = len(FewShotExamples.JAVA_EXAMPLES)
+
+        custom_example = VulnerabilityExample(
+            title="Custom Java Vulnerability",
+            language="java",
+            vulnerable_code="Runtime.exec(userInput)",
+            issue="Command injection",
+            fix="Use ProcessBuilder with validation",
+            severity="high",
+            category="security"
+        )
+
+        FewShotExamples.add_custom_example(custom_example)
+
+        assert len(FewShotExamples.JAVA_EXAMPLES) == initial_count + 1
+
+        # Clean up
+        FewShotExamples.JAVA_EXAMPLES.pop()
 
     def test_python_examples_exist(self):
         """Test that PYTHON_EXAMPLES class attribute exists and has content."""
@@ -174,3 +220,28 @@ class TestFewShotExamples:
         # Should return equal data but different objects
         assert examples1 == examples2
         assert examples1 is not examples2
+
+    def test_add_custom_example_unsupported_language(self):
+        """Test adding a custom example with unsupported language does nothing."""
+        custom_example = VulnerabilityExample(
+            title="Custom Unsupported Vulnerability",
+            language="unsupported_lang",
+            vulnerable_code="some code",
+            issue="Some issue",
+            fix="Some fix",
+            severity="high",
+            category="security"
+        )
+
+        # Count initial examples
+        python_count = len(FewShotExamples.PYTHON_EXAMPLES)
+        js_count = len(FewShotExamples.JAVASCRIPT_EXAMPLES)
+        java_count = len(FewShotExamples.JAVA_EXAMPLES)
+
+        # Add example with unsupported language
+        FewShotExamples.add_custom_example(custom_example)
+
+        # Verify no lists were modified
+        assert len(FewShotExamples.PYTHON_EXAMPLES) == python_count
+        assert len(FewShotExamples.JAVASCRIPT_EXAMPLES) == js_count
+        assert len(FewShotExamples.JAVA_EXAMPLES) == java_count

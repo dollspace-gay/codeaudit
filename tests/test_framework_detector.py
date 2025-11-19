@@ -3,6 +3,8 @@ Tests for framework_detector.py module.
 """
 
 import pytest
+from pathlib import Path
+from unittest.mock import patch
 from framework_detector import FrameworkDetector
 
 
@@ -202,3 +204,97 @@ class TestGetThreatModelsForFrameworks:
         assert 'web' in threat_models
         assert 'api' in threat_models
         assert 'database' in threat_models
+
+
+class TestDetectFromFile:
+    """Test detect_from_file method."""
+
+    def test_detect_from_file_python(self, tmp_path):
+        """Test detecting frameworks from a Python file."""
+        detector = FrameworkDetector()
+
+        # Create a Python file with Django code
+        test_file = tmp_path / "views.py"
+        test_file.write_text("""
+from django.http import HttpResponse
+from django.views import View
+
+class MyView(View):
+    def get(self, request):
+        return HttpResponse("Hello")
+""")
+
+        frameworks = detector.detect_from_file(test_file)
+        assert 'django' in frameworks
+
+    def test_detect_from_file_javascript(self, tmp_path):
+        """Test detecting frameworks from a JavaScript file."""
+        detector = FrameworkDetector()
+
+        test_file = tmp_path / "app.js"
+        test_file.write_text("""
+const express = require('express');
+const app = express();
+
+app.get('/', (req, res) => {
+    res.send('Hello World');
+});
+""")
+
+        frameworks = detector.detect_from_file(test_file)
+        assert 'express' in frameworks
+
+    def test_detect_from_file_unsupported_extension(self, tmp_path):
+        """Test that unsupported file extensions return empty list."""
+        detector = FrameworkDetector()
+
+        test_file = tmp_path / "readme.txt"
+        test_file.write_text("This is a text file")
+
+        frameworks = detector.detect_from_file(test_file)
+        assert frameworks == []
+
+    def test_detect_from_file_nonexistent_file(self):
+        """Test handling of non-existent files."""
+        detector = FrameworkDetector()
+
+        fake_file = Path("nonexistent.py")
+        frameworks = detector.detect_from_file(fake_file)
+        assert frameworks == []
+
+    def test_detect_from_file_unreadable_file(self, tmp_path):
+        """Test handling of file read errors."""
+        detector = FrameworkDetector()
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("from django import forms")
+
+        # Mock file read to raise exception
+        with patch('builtins.open', side_effect=IOError("Permission denied")):
+            frameworks = detector.detect_from_file(test_file)
+            assert frameworks == []
+
+    def test_detect_frameworks_with_invalid_language(self):
+        """Test error handling for invalid language enum."""
+        detector = FrameworkDetector()
+
+        # This should handle the case where language conversion fails
+        code = "from django import forms"
+
+        # Force an exception by passing invalid data
+        with patch('framework_detector.Language', side_effect=ValueError("Invalid")):
+            frameworks = detector.detect_frameworks(code, 'invalid_lang')
+            assert frameworks == []
+
+    def test_detect_frameworks_with_language_enum_but_no_patterns(self):
+        """Test detecting frameworks with valid language enum but no patterns defined."""
+        detector = FrameworkDetector()
+
+        # Rust is a valid Language enum but has no patterns defined in PATTERNS dict
+        rust_code = """
+        fn main() {
+            println!("Hello, world!");
+        }
+        """
+        frameworks = detector.detect_frameworks(rust_code, "rust")
+        assert frameworks == []
