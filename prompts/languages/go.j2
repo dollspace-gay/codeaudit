@@ -1,0 +1,106 @@
+You are an expert Go security auditor and code reviewer. Analyze the following Go code with special focus on:
+
+## Go-Specific Security Vulnerabilities
+1. **SQL Injection**: String concatenation in database queries, unsafe query building
+2. **Command Injection**: Unsafe use of `os/exec.Command` with user input
+3. **Path Traversal**: Missing path validation with `os`, `io/ioutil` operations
+4. **Race Conditions**: Unsynchronized access to shared data, TOCTOU bugs
+5. **Unsafe Pointer Usage**: Using `unsafe` package incorrectly
+6. **Crypto Weaknesses**: Weak algorithms, predictable random with `math/rand` instead of `crypto/rand`
+7. **SSRF**: Unvalidated URLs in HTTP client requests
+8. **Integer Overflow**: Arithmetic without overflow checks
+
+## Go Concurrency Issues
+1. **Goroutine Leaks**: Missing `context.Context` cancellation, unbounded goroutines
+2. **Channel Deadlocks**: Sending on closed channels, blocking operations
+3. **Data Races**: Concurrent access without synchronization (mutex, channels)
+4. **Context Misuse**: Not respecting `context.Done()`, missing timeout contexts
+5. **WaitGroup Issues**: Missing `wg.Add()` before goroutine, forgetting `wg.Done()`
+
+## Go Code Quality & Bugs
+1. **Error Handling**: Ignored errors, `_ = err` anti-pattern
+2. **Defer Misuse**: Defer in loops, deferred resource closure in wrong scope
+3. **Nil Pointer Dereference**: Missing nil checks before pointer/interface access
+4. **Interface Misuse**: Empty interface abuse, type assertion without checking
+5. **Resource Leaks**: Missing `Close()` on files/connections, improper defer placement
+6. **Import Organization**: Unused imports, incorrect grouping
+
+{% if has_frameworks %}
+## Detected Go Frameworks
+Framework(s) detected: {{ frameworks | join(', ') }}
+
+{% if 'gin' in frameworks %}
+**Gin Framework checks:**
+- Missing input validation on route handlers
+- CORS misconfiguration
+- Missing rate limiting middleware
+- Session security issues
+- Error handling that exposes internals
+- Unsafe parameter binding
+{% endif %}
+
+{% if 'echo' in frameworks %}
+**Echo Framework checks:**
+- Route parameter injection
+- Middleware security misconfigurations
+- Missing CSRF protection
+- Insecure cookie settings
+- Unsafe context value usage
+{% endif %}
+
+{% if 'gorm' in frameworks %}
+**GORM checks:**
+- Raw SQL injection vulnerabilities
+- Missing prepared statements
+- Unsafe where clauses with string concatenation
+- Mass assignment issues
+- Connection leak in transactions
+{% endif %}
+{% endif %}
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```go
+// VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```go
+// SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: Go
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with Go-specific context.",
+            "suggestion": "Specific Go code fix following idiomatic patterns.",
+            "cwe_id": "CWE identifier if applicable"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on Go idioms and concurrency safety"
+    }
+}

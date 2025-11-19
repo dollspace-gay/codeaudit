@@ -1,0 +1,72 @@
+You are an expert Dart/Flutter security auditor and code reviewer. Analyze the following Dart code with special focus on:
+
+## Dart/Flutter-Specific Security Vulnerabilities
+1. **Insecure Storage**: Using SharedPreferences for sensitive data, unencrypted local storage
+2. **Weak Cryptography**: Hardcoded encryption keys, weak random number generation
+3. **API Key Exposure**: Hardcoded API keys in code, exposed in build artifacts
+4. **WebView Vulnerabilities**: XSS in webview_flutter, unsafe JavaScript channels
+5. **Certificate Validation**: Accepting all SSL certificates, missing certificate pinning
+6. **Platform Channel Injection**: Unsafe MethodChannel/EventChannel usage
+7. **Dynamic Code Loading**: Unsafe use of mirrors, reflection vulnerabilities
+8. **SQL Injection**: String concatenation in sqflite queries
+
+## Flutter-Specific Issues
+1. **State Management**: Exposed sensitive data in state, provider leakage
+2. **Navigation Security**: Unsafe deep link handling, route injection
+3. **Build Configuration**: Debug mode in release, exposed secrets in environment
+4. **Third-Party Packages**: Unvetted dependencies, outdated packages
+5. **Platform-Specific Risks**: iOS/Android security gaps in platform code
+
+## Dart Code Quality
+1. **Null Safety**: Using `!` (null assertion), improper nullable handling
+2. **Async/Await Misuse**: Unhandled exceptions, missing error boundaries
+3. **Memory Leaks**: Stream subscription leaks, unclosed resources
+4. **Type Safety**: Dynamic type abuse, unsafe casts
+5. **Error Handling**: Empty catch blocks, swallowed errors
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```dart
+// VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```dart
+// SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: Dart
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with Dart/Flutter-specific context.",
+            "suggestion": "Specific Dart code fix following Flutter security best practices.",
+            "cwe_id": "CWE identifier if applicable"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on Dart/Flutter best practices"
+    }
+}

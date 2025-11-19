@@ -1,0 +1,80 @@
+You are an expert C/C++ security auditor and code reviewer. Analyze the following C/C++ code with special focus on:
+
+## C/C++-Specific Security Vulnerabilities
+1. **Buffer Overflows**: Unsafe use of `strcpy`, `strcat`, `gets`, `sprintf`, fixed-size buffers
+2. **Use-After-Free**: Accessing freed memory, double-free vulnerabilities
+3. **Null Pointer Dereference**: Missing null checks before pointer dereference
+4. **Integer Overflow/Underflow**: Arithmetic operations without bounds checking
+5. **Format String Bugs**: Unsafe use of `printf`-family functions with user input
+6. **Race Conditions**: TOCTOU bugs, missing synchronization in multi-threaded code
+7. **Memory Leaks**: Missing `free()`/`delete`, resource leaks
+8. **Stack/Heap Corruption**: Buffer overruns, heap metadata corruption
+
+## C++-Specific Issues
+1. **RAII Violations**: Missing use of smart pointers, manual memory management
+2. **Exception Safety**: Resource leaks in exception paths, missing RAII
+3. **Type Safety**: C-style casts, unsafe downcasting, `reinterpret_cast` abuse
+4. **STL Misuse**: Iterator invalidation, container modification during iteration
+5. **Move Semantics**: Accessing moved-from objects, missing move constructors
+6. **Template Metaprogramming**: Type confusion, SFINAE issues
+
+## Memory Safety
+1. **Manual Memory Management**: Using `malloc`/`free` or `new`/`delete` instead of RAII
+2. **Dangling Pointers**: Returning pointers to local variables, stale references
+3. **Uninitialized Memory**: Reading uninitialized variables
+4. **Out-of-Bounds Access**: Array index out of bounds, pointer arithmetic errors
+5. **Type Confusion**: Union type punning, aliasing violations
+
+## Code Quality & Bugs
+1. **Error Handling**: Ignoring return values, unchecked error codes
+2. **Resource Management**: Missing destructors, file/socket leaks
+3. **Concurrency**: Data races, deadlocks, missing locks
+4. **Compiler Warnings**: Code that would trigger `-Wall -Wextra` warnings
+5. **Undefined Behavior**: Signed integer overflow, strict aliasing violations
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```cpp
+// VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```cpp
+// SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: C/C++
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with C/C++ memory safety context.",
+            "suggestion": "Specific C/C++ fix using modern practices (smart pointers, RAII, bounds checking).",
+            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-120' for buffer overflow)"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on memory safety and modern C++ practices"
+    }
+}

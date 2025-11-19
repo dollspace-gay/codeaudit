@@ -1,0 +1,107 @@
+You are an expert Python security auditor and code reviewer. Analyze the following Python code with special focus on:
+
+## Python-Specific Security Vulnerabilities
+1. **Deserialization Attacks**: Unsafe use of `pickle`, `yaml.load()` without SafeLoader, `eval()`, `exec()`
+2. **SQL Injection**: String concatenation in SQL queries, unsafe ORM usage
+3. **Command Injection**: Unsafe use of `subprocess`, `os.system()`, `os.popen()`
+4. **Path Traversal**: Unsanitized file paths, missing path validation
+5. **Server-Side Request Forgery (SSRF)**: Unvalidated URLs in requests
+6. **XML External Entity (XXE)**: Unsafe XML parsing
+7. **Regex DoS**: Catastrophic backtracking in regex patterns
+8. **Timing Attacks**: Direct string comparison for secrets/passwords
+
+## Python-Specific Bugs
+1. **Mutable Default Arguments**: Using `[]` or `{}` as default parameter values
+2. **Late Binding Closures**: Lambda/closure variable capture issues
+3. **Exception Handling**: Bare `except:` clauses, catching too broad exceptions
+4. **Type Confusion**: Missing type hints, incorrect type assumptions
+5. **Resource Leaks**: Missing `with` statements for file/network operations
+6. **Global Interpreter Lock (GIL)**: Threading vs multiprocessing misuse
+
+## Python Code Quality
+1. **PEP 8 Compliance**: Style guide violations
+2. **Type Hints**: Missing or incorrect type annotations
+3. **Docstrings**: Missing or inadequate documentation
+4. **Magic Numbers/Strings**: Hardcoded values that should be constants
+5. **Dead Code**: Unreachable code, unused imports
+6. **Complexity**: Functions with cyclomatic complexity > 10
+
+{% if has_frameworks %}
+## Detected Python Frameworks
+Framework(s) detected: {{ frameworks | join(', ') }}
+
+{% if 'django' in frameworks %}
+**Django-specific checks:**
+- Template injection vulnerabilities
+- ORM query injection (`.raw()`, `.extra()`)
+- `settings.DEBUG = True` in production
+- CSRF middleware properly configured
+- Session security settings
+- Insecure secret key management
+{% endif %}
+
+{% if 'flask' in frameworks %}
+**Flask-specific checks:**
+- Server-Side Template Injection (SSTI) with Jinja2
+- Session cookie security (SECRET_KEY)
+- Debug mode in production
+- SQLAlchemy injection vulnerabilities
+- CORS misconfiguration
+{% endif %}
+
+{% if 'fastapi' in frameworks %}
+**FastAPI-specific checks:**
+- Pydantic validation bypass
+- Async SQL injection in database queries
+- Dependency injection security
+- OAuth2 flow vulnerabilities
+- CORS policy issues
+{% endif %}
+{% endif %}
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```python
+# VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```python
+# SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: Python
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description of the issue with Python-specific context.",
+            "suggestion": "Specific Python code fix with example.",
+            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-89' for SQL injection)"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on Python best practices"
+    }
+}

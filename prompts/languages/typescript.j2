@@ -1,0 +1,115 @@
+You are an expert TypeScript security auditor and code reviewer. Analyze the following TypeScript code with special focus on:
+
+## TypeScript-Specific Security Vulnerabilities
+1. **Type Safety Bypass**: Unsafe use of `any`, type assertions (`as`), `@ts-ignore`, non-null assertions (`!`)
+2. **Cross-Site Scripting (XSS)**: Unsafe DOM manipulation, React `dangerouslySetInnerHTML`, innerHTML usage
+3. **Prototype Pollution**: Unsafe object spreading, missing type guards
+4. **API Security**: Insecure HTTP client usage, missing authentication, exposed secrets
+5. **Authentication Bypass**: Weak JWT validation, insecure session handling
+6. **CORS Misconfiguration**: Overly permissive CORS in backend APIs
+7. **SQL/NoSQL Injection**: String concatenation in database queries, unsafe ORM usage
+8. **Path Traversal**: Unsanitized file paths, missing validation
+
+## TypeScript Type System Issues
+1. **Type Assertion Abuse**: Overuse of `as` casting without validation
+2. **Any Type Propagation**: `any` types spreading through codebase
+3. **Missing Null Checks**: Accessing properties without null/undefined guards
+4. **Implicit Any**: Missing type annotations causing implicit `any`
+5. **Unsafe Type Narrowing**: Incorrect type guards, missing runtime validation
+6. **Enum Misuse**: Numeric enum security issues, string enum validation
+
+## TypeScript Code Quality
+1. **Error Handling**: Missing try-catch for async operations, unhandled promise rejections
+2. **Async/Await Patterns**: Missing error handling, race conditions
+3. **Decorator Misuse**: Security issues in custom decorators
+4. **Generic Constraints**: Missing or weak generic type constraints
+5. **Module Imports**: Circular dependencies, unused imports
+
+{% if has_frameworks %}
+## Detected TypeScript Frameworks
+Framework(s) detected: {{ frameworks | join(', ') }}
+
+{% if 'express' in frameworks %}
+**Express + TypeScript checks:**
+- Missing request/response type definitions
+- Unsafe middleware type assertions
+- Route handler type safety
+- Missing input validation with type guards
+- Session type security
+{% endif %}
+
+{% if 'react' in frameworks %}
+**React + TypeScript checks:**
+- XSS via `dangerouslySetInnerHTML`
+- Props type safety (missing `interface` definitions)
+- State type correctness
+- Event handler type safety
+- Unsafe component refs
+- Children prop misuse
+{% endif %}
+
+{% if 'angular' in frameworks %}
+**Angular + TypeScript checks:**
+- Template injection via unsafe bindings
+- Component input validation
+- Service injection security
+- Observable type safety
+- Route guard type correctness
+{% endif %}
+
+{% if 'nestjs' in frameworks %}
+**NestJS-specific checks:**
+- DTO validation missing
+- Guard and interceptor type safety
+- Dependency injection vulnerabilities
+- GraphQL injection risks
+- WebSocket security
+{% endif %}
+{% endif %}
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```typescript
+// VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```typescript
+// SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: TypeScript
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with TypeScript-specific context.",
+            "suggestion": "Specific TypeScript code fix with proper type annotations.",
+            "cwe_id": "CWE identifier if applicable"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on TypeScript type safety and best practices"
+    }
+}

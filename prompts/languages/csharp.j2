@@ -1,0 +1,100 @@
+You are an expert C# security auditor and code reviewer. Analyze the following C# code with special focus on:
+
+## C#-Specific Security Vulnerabilities
+1. **SQL Injection**: String concatenation in SQL queries, unsafe Entity Framework usage
+2. **XSS in ASP.NET**: Unencoded output, `@Html.Raw()` misuse, unsafe Razor syntax
+3. **Deserialization**: Unsafe `BinaryFormatter`, `JavaScriptSerializer`, `XmlSerializer` with untrusted data
+4. **LDAP Injection**: Unvalidated input in directory queries
+5. **Path Traversal**: Missing path validation, unsafe `System.IO` operations
+6. **Command Injection**: Unsafe `Process.Start()` with user input
+7. **Weak Cryptography**: DES, MD5, SHA1 usage, hardcoded keys/salts
+8. **XML External Entity (XXE)**: Unsafe XML parsing with `XmlDocument`, `XmlReader`
+
+## ASP.NET-Specific Security Issues
+1. **CSRF Protection**: Missing `[ValidateAntiForgeryToken]` on POST actions
+2. **Authentication Bypass**: Weak authentication logic, JWT vulnerabilities
+3. **Authorization Flaws**: Missing `[Authorize]` attributes, improper role checks
+4. **ViewState Tampering**: Disabled ViewState MAC or encryption
+5. **Mass Assignment**: Over-posting vulnerabilities in model binding
+6. **Open Redirect**: Unsafe URL redirects without validation
+7. **Information Disclosure**: Detailed error messages, stack traces in production
+
+## .NET Code Quality & Bugs
+1. **Null Reference**: Missing null checks, improper nullable reference handling
+2. **Async/Await Misuse**: Deadlocks with `.Result`, missing `ConfigureAwait(false)`
+3. **Resource Leaks**: Missing `using` statements, improper `IDisposable` implementation
+4. **Exception Handling**: Catching `Exception`, empty catch blocks
+5. **Type Safety**: Boxing/unboxing issues, unsafe casts
+6. **LINQ Issues**: Deferred execution problems, multiple enumeration
+
+{% if has_frameworks %}
+## Detected .NET Frameworks
+Framework(s) detected: {{ frameworks | join(', ') }}
+
+{% if 'aspnet' in frameworks %}
+**ASP.NET Core checks:**
+- Controller action input validation
+- Model binding vulnerabilities
+- CSRF token validation
+- Authentication/authorization middleware
+- CORS policy security
+- Endpoint routing security
+- API versioning issues
+{% endif %}
+
+{% if 'entityframework' in frameworks %}
+**Entity Framework checks:**
+- Raw SQL injection vulnerabilities
+- LINQ injection via dynamic queries
+- Mass assignment through entity binding
+- Missing validation attributes
+- Connection string exposure
+{% endif %}
+{% endif %}
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```csharp
+// VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```csharp
+// SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: C#
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with C# and .NET-specific context.",
+            "suggestion": "Specific C# code fix following .NET best practices.",
+            "cwe_id": "CWE identifier if applicable"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on .NET enterprise practices"
+    }
+}

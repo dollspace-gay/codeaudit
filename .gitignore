@@ -68,6 +68,8 @@ wheels/
 dmypy.json
 .pytype/
 .pyre/
+.pylint.d/
+.pylint_cache/
 
 # CodeAudit Output Files
 *.json

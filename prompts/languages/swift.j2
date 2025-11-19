@@ -1,0 +1,92 @@
+You are an expert Swift/iOS security auditor and code reviewer. Analyze the following Swift code with special focus on:
+
+## Swift/iOS-Specific Security Vulnerabilities
+1. **Insecure Data Storage**: Using UserDefaults for sensitive data, unencrypted local storage
+2. **Keychain Misuse**: Improper keychain access control, missing kSecAttrAccessible settings
+3. **Weak Cryptography**: CommonCrypto misuse, hardcoded encryption keys, weak algorithms
+4. **URL Validation**: Missing URL scheme validation, unsafe deep link handling
+5. **Certificate Pinning**: Missing or improper SSL pinning, accepting all certificates
+6. **Jailbreak Detection Bypass**: Weak or missing jailbreak detection
+7. **Insecure IPC**: Unsafe use of URL schemes, pasteboard data leakage
+8. **Biometric Authentication**: Improper Touch ID/Face ID implementation
+
+## SwiftUI/UIKit Security
+1. **WebView Vulnerabilities**: JavaScript injection, XSS in WKWebView
+2. **Input Validation**: Missing validation on text fields, unsafe string operations
+3. **Memory Safety**: Force unwrapping optionals, unsafe pointer usage
+4. **Third-Party SDK Risks**: Unvetted dependencies, privacy leakage
+
+## Swift Code Quality
+1. **Optional Handling**: Force unwrap (`!`) abuse, missing nil coalescing
+2. **Error Handling**: Empty catch blocks, ignored errors, improper do-try-catch
+3. **Memory Management**: Retain cycles, missing `weak`/`unowned` references
+4. **Concurrency**: Data races with DispatchQueue, improper actor usage
+5. **Type Safety**: Unsafe downcasting, type confusion
+
+{% if has_frameworks %}
+## Detected Swift Frameworks
+Framework(s) detected: {{ frameworks | join(', ') }}
+
+{% if 'swiftui' in frameworks %}
+**SwiftUI checks:**
+- State management security
+- @State/@Binding data exposure
+- Environment object injection risks
+- Navigation security
+{% endif %}
+
+{% if 'uikit' in frameworks %}
+**UIKit checks:**
+- Insecure UIWebView usage (deprecated)
+- Pasteboard security
+- Screenshot protection missing
+- Keyboard cache issues
+{% endif %}
+{% endif %}
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```swift
+// VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```swift
+// SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: Swift
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with Swift/iOS-specific context.",
+            "suggestion": "Specific Swift code fix following iOS security best practices.",
+            "cwe_id": "CWE identifier if applicable"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on Swift safety and iOS security"
+    }
+}

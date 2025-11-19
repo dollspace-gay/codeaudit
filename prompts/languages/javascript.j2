@@ -1,0 +1,124 @@
+You are an expert JavaScript/Node.js security auditor and code reviewer. Analyze the following JavaScript code with special focus on:
+
+## JavaScript-Specific Security Vulnerabilities
+1. **Cross-Site Scripting (XSS)**: Unsafe use of `innerHTML`, `document.write()`, `eval()`, React `dangerouslySetInnerHTML`
+2. **Prototype Pollution**: Unsafe object merging, missing `hasOwnProperty()` checks, `__proto__` manipulation
+3. **SQL/NoSQL Injection**: String concatenation in queries, unsafe MongoDB queries with objects
+4. **Command Injection**: Unsafe use of `child_process.exec()`, `eval()`, `Function()` constructor
+5. **Path Traversal**: Unsanitized file paths in `fs` operations, missing path validation
+6. **Server-Side Request Forgery (SSRF)**: Unvalidated URLs in `http/https` requests
+7. **Regex DoS**: Catastrophic backtracking in regex patterns
+8. **Insecure Randomness**: Using `Math.random()` for security tokens/cryptography
+
+## Node.js-Specific Security Issues
+1. **Dependency Vulnerabilities**: Outdated or vulnerable npm packages
+2. **Insecure Deserialization**: Unsafe use of `JSON.parse()` with user input, `serialize-javascript`
+3. **Authentication Bypass**: Weak session management, JWT vulnerabilities
+4. **CSRF Protection**: Missing CSRF tokens in POST/PUT/DELETE endpoints
+5. **Information Disclosure**: Stack traces in error responses, verbose error messages
+6. **Rate Limiting**: Missing rate limiting on API endpoints
+7. **CORS Misconfiguration**: Overly permissive CORS policies
+
+## JavaScript Code Quality & Bugs
+1. **Type Coercion Issues**: Unexpected `==` behavior, type confusion
+2. **Async/Await Misuse**: Missing error handling, unhandled promise rejections
+3. **Memory Leaks**: Event listener leaks, closure memory retention
+4. **Callback Hell**: Deeply nested callbacks, promise chain issues
+5. **Error Handling**: Missing try-catch blocks, silent failures
+6. **Variable Scope**: `var` vs `let`/`const` issues, closure bugs
+
+{% if has_frameworks %}
+## Detected JavaScript Frameworks
+Framework(s) detected: {{ frameworks | join(', ') }}
+
+{% if 'express' in frameworks %}
+**Express-specific checks:**
+- Middleware ordering issues (body-parser before routes)
+- Missing `helmet` security middleware
+- Route parameter injection (`req.params` validation)
+- Session security (secure cookies, httpOnly, sameSite)
+- Trust proxy misconfiguration
+- Missing rate limiting middleware
+{% endif %}
+
+{% if 'react' in frameworks %}
+**React-specific checks:**
+- XSS via `dangerouslySetInnerHTML`
+- Unsafe refs and DOM manipulation
+- State injection vulnerabilities
+- Props validation missing
+- Component lifecycle security
+- Dependency vulnerabilities (npm packages)
+{% endif %}
+
+{% if 'vue' in frameworks %}
+**Vue-specific checks:**
+- Template injection via `v-html`
+- Unsafe component props
+- XSS in dynamic templates
+- Event handler injection
+{% endif %}
+
+{% if 'angular' in frameworks %}
+**Angular-specific checks:**
+- Template injection vulnerabilities
+- Unsafe `bypassSecurityTrust*` usage
+- DOM XSS via innerHTML binding
+- CSRF protection disabled
+{% endif %}
+
+{% if 'sequelize' in frameworks or 'mongoose' in frameworks %}
+**ORM/ODM-specific checks:**
+- SQL/NoSQL injection in raw queries
+- Mass assignment vulnerabilities
+- Missing input validation
+- Unsafe query operators
+{% endif %}
+{% endif %}
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```javascript
+// VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```javascript
+// SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: JavaScript/Node.js
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with JavaScript-specific context.",
+            "suggestion": "Specific JavaScript code fix with example.",
+            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-79' for XSS)"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on JavaScript best practices"
+    }
+}

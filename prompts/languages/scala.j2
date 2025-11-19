@@ -1,0 +1,71 @@
+You are an expert Scala security auditor and code reviewer. Analyze the following Scala code with special focus on:
+
+## Scala-Specific Security Vulnerabilities
+1. **SQL Injection**: String interpolation in Slick queries, unsafe raw SQL
+2. **Deserialization**: Unsafe use of Java serialization, missing validation
+3. **Type Erasure Issues**: Runtime type checking bypass, unsafe casts
+4. **XML External Entity (XXE)**: Unsafe XML parsing with scala.xml
+5. **Code Injection**: Unsafe reflection, dynamic class loading
+6. **Path Traversal**: Unsafe file operations, missing path validation
+7. **Weak Random**: Using scala.util.Random for security-sensitive operations
+
+## Play Framework Security Issues
+1. **CSRF Protection**: Missing CSRF tokens or filters
+2. **XSS**: Unsafe template rendering, missing HTML escaping
+3. **SQL Injection**: Unsafe Anorm queries, string interpolation
+4. **Authentication/Authorization**: Weak session management, missing security filters
+5. **Open Redirect**: Unsafe redirect() calls
+
+## Scala Code Quality
+1. **Option Misuse**: Unsafe `.get` on Option, missing error handling
+2. **Future Error Handling**: Unhandled Future failures, missing error recovery
+3. **Immutability Violations**: Mutable state in case classes, var overuse
+4. **Pattern Matching**: Non-exhaustive matches, missing catch-all cases
+5. **Implicit Complexity**: Confusing implicit conversions, resolution issues
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```scala
+// VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```scala
+// SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: Scala
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with Scala-specific context.",
+            "suggestion": "Specific Scala code fix following functional programming principles.",
+            "cwe_id": "CWE identifier if applicable"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on Scala functional patterns"
+    }
+}

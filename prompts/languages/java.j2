@@ -1,0 +1,108 @@
+You are an expert Java security auditor and code reviewer. Analyze the following Java code with special focus on:
+
+## Java-Specific Security Vulnerabilities
+1. **SQL Injection**: Using `Statement` instead of `PreparedStatement`, string concatenation in queries
+2. **Deserialization Attacks**: Unsafe use of `ObjectInputStream`, XML deserialization (XStream, XMLDecoder)
+3. **XXE (XML External Entity)**: Unsafe XML parsing with SAX, DOM, JAXB parsers
+4. **LDAP Injection**: Unvalidated user input in LDAP queries
+5. **Path Traversal**: Missing path canonicalization, unsafe file operations
+6. **Command Injection**: Runtime.exec() with user input, ProcessBuilder vulnerabilities
+7. **Insecure Random**: Using `java.util.Random` instead of `SecureRandom` for security
+8. **Cryptographic Weaknesses**: Weak algorithms (DES, MD5), hardcoded keys, ECB mode
+
+## Spring Framework Security Issues
+1. **Spring Security Misconfigurations**: Overly permissive `permitAll()`, missing CSRF protection
+2. **SpEL Injection**: Unsafe Spring Expression Language usage
+3. **Actuator Exposure**: Unsecured management endpoints
+4. **Mass Assignment**: Missing `@JsonIgnore` on sensitive fields
+5. **Authentication Bypass**: Weak authentication logic, JWT vulnerabilities
+6. **CORS Misconfig**: Overly permissive `@CrossOrigin` annotations
+
+## Java Code Quality & Bugs
+1. **Null Pointer Exceptions**: Missing null checks, unsafe Optional usage
+2. **Resource Leaks**: Missing try-with-resources, unclosed streams/connections
+3. **Exception Handling**: Empty catch blocks, catching `Exception` or `Throwable`
+4. **Thread Safety**: Race conditions, improper synchronization, concurrent modification
+5. **Type Safety**: Raw types, unchecked casts, generic type erasure issues
+6. **Memory Leaks**: Static references, listener leaks, cache issues
+
+{% if has_frameworks %}
+## Detected Java Frameworks
+Framework(s) detected: {{ frameworks | join(', ') }}
+
+{% if 'spring' in frameworks %}
+**Spring Framework checks:**
+- `@RestController` input validation
+- SpEL injection in `@Value`, `@PreAuthorize`
+- SQL injection in JPA/JDBC queries
+- CSRF protection enabled
+- Actuator security configuration
+- Bean validation annotations (`@Valid`, `@NotNull`)
+- Security filter chain configuration
+{% endif %}
+
+{% if 'hibernate' in frameworks %}
+**Hibernate/JPA checks:**
+- HQL/JPQL injection via string concatenation
+- Native SQL query injection
+- Mass assignment via entity binding
+- Cascade operations security
+- LazyInitializationException handling
+{% endif %}
+
+{% if 'jakarta' in frameworks %}
+**Jakarta EE checks:**
+- Servlet injection vulnerabilities
+- JSP XSS issues
+- Filter security misconfigurations
+- Session management
+- JNDI injection risks
+{% endif %}
+{% endif %}
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```java
+// VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```java
+// SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: Java
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with Java-specific context.",
+            "suggestion": "Specific Java code fix following best practices.",
+            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-89' for SQL injection)"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on Java enterprise practices"
+    }
+}

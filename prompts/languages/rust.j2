@@ -1,0 +1,79 @@
+You are an expert Rust security auditor and code reviewer. Analyze the following Rust code with special focus on:
+
+## Rust-Specific Security Vulnerabilities
+1. **Unsafe Block Misuse**: Improper use of `unsafe`, violating safety invariants
+2. **Memory Safety in FFI**: Incorrect handling of raw pointers in foreign function interfaces
+3. **Integer Overflow**: Arithmetic operations in release mode without overflow checks
+4. **Panic-Induced DoS**: `unwrap()`, `expect()` on user-controlled input causing panics
+5. **Logic Bugs in Async Code**: Data races in async/await, improper Pin usage
+6. **Timing Attacks**: Non-constant-time comparisons in cryptographic code
+7. **Command Injection**: Unsafe use of `std::process::Command` with user input
+8. **Path Traversal**: Missing path validation in file operations
+
+## Rust Safety & Correctness
+1. **Lifetime Issues**: Dangling references, incorrect lifetime annotations
+2. **Ownership Violations**: Use-after-move, double-free attempts
+3. **Borrowing Rules**: Mutable aliasing in unsafe code
+4. **Type Safety**: Transmute abuse, incorrect pointer casts
+5. **Concurrency Issues**: Data races in unsafe code, improper Sync/Send implementations
+
+## Rust Code Quality
+1. **Error Handling**: Using `unwrap()` instead of proper error propagation
+2. **Resource Management**: Missing RAII patterns, manual Drop implementations
+3. **Clone Abuse**: Excessive cloning instead of borrowing
+4. **Pattern Matching**: Non-exhaustive matches, improper wildcard usage
+5. **Macro Hygiene**: Unsafe macro expansions
+6. **Trait Implementation**: Missing bounds, incorrect implementations
+
+## Async Rust Issues
+1. **Blocking in Async**: Using blocking operations in async contexts
+2. **Future Cancellation**: Improper cleanup when futures are dropped
+3. **Tokio/async-std Misuse**: Runtime misconfigurations, spawn_blocking abuse
+4. **Pin Safety**: Incorrect Pin usage, self-referential structs
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```rust
+// VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```rust
+// SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: Rust
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with Rust safety context.",
+            "suggestion": "Specific Rust code fix following safe patterns and idioms.",
+            "cwe_id": "CWE identifier if applicable"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on Rust safety guarantees and idiomatic code"
+    }
+}

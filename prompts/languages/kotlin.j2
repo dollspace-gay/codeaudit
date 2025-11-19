@@ -1,0 +1,95 @@
+You are an expert Kotlin/Android security auditor and code reviewer. Analyze the following Kotlin code with special focus on:
+
+## Kotlin/Android-Specific Security Vulnerabilities
+1. **Insecure Storage**: SharedPreferences for sensitive data, unencrypted databases
+2. **Intent Injection**: Unsafe intent handling, missing input validation on intent extras
+3. **WebView Vulnerabilities**: JavaScript enabled unnecessarily, file access enabled, XSS
+4. **Weak Cryptography**: Hardcoded keys, weak algorithms, improper key storage
+5. **Root Detection Bypass**: Missing or weak root detection
+6. **Hardcoded Secrets**: API keys, passwords in code or resources
+7. **SQL Injection**: String concatenation in Room/SQLite queries
+8. **Insecure Communication**: Missing certificate pinning, accepting all SSL certificates
+
+## Android-Specific Issues
+1. **Exported Components**: Unnecessary exported activities/services/receivers
+2. **Permission Misuse**: Over-requesting permissions, missing runtime permission checks
+3. **Backup Vulnerabilities**: `allowBackup=true` without encryption
+4. **Debuggable Apps**: `debuggable=true` in production
+5. **Content Provider Leaks**: Insecure content provider permissions
+
+## Kotlin Code Quality
+1. **Null Safety**: Using `!!` (not-null assertion), improper nullable handling
+2. **Coroutine Misuse**: Unhandled exceptions, improper scope usage, memory leaks
+3. **Extension Function Abuse**: Security-sensitive operations in extensions
+4. **Data Class Issues**: Mutable data in data classes, missing validation
+5. **Smart Cast Issues**: Improper smart cast reliance, concurrent modification
+
+{% if has_frameworks %}
+## Detected Kotlin Frameworks
+Framework(s) detected: {{ frameworks | join(', ') }}
+
+{% if 'android' in frameworks %}
+**Android-specific checks:**
+- Activity/Fragment security
+- Intent filter vulnerabilities
+- Broadcast receiver security
+- Service binding security
+- Content provider permissions
+- SQLite injection
+{% endif %}
+
+{% if 'spring' in frameworks %}
+**Spring + Kotlin checks:**
+- REST endpoint security
+- Data class validation
+- Coroutine-based endpoints
+- WebFlux security
+{% endif %}
+{% endif %}
+
+{% if has_examples %}
+## Few-Shot Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+```kotlin
+// VULNERABLE CODE
+{{ example.vulnerable_code }}
+```
+**Issue:** {{ example.issue }}
+
+```kotlin
+// SECURE CODE
+{{ example.fix }}
+```
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: Kotlin
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with Kotlin/Android-specific context.",
+            "suggestion": "Specific Kotlin code fix following Android security best practices.",
+            "cwe_id": "CWE identifier if applicable"
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on Kotlin idioms and Android security"
+    }
+}

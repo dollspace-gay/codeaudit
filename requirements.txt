@@ -6,3 +6,6 @@ google-generativeai==0.8.3
 
 # Cross-platform colored terminal output
 colorama==0.4.6
+
+# Template engine for dynamic prompt generation
+jinja2==3.1.4
