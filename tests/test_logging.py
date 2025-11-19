@@ -243,7 +243,7 @@ class TestLoggingIntegration:
         logger = setup_logging()
 
         assert isinstance(logger, logging.Logger)
-        assert logger.name == '__main__'
+        assert logger.name == 'codeaudit'  # Module name when imported
 
     def test_multiple_setup_calls_are_idempotent(self):
         """Test that calling setup_logging multiple times is safe."""
