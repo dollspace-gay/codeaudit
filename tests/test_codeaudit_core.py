@@ -18,15 +18,14 @@ from codeaudit import (
 class TestCodeAnalyzerCore:
     """Test CodeAnalyzer core functionality."""
 
-    def test_initialization_gemini_api_error(self, capsys):
+    def test_initialization_gemini_api_error(self, caplog):
         """Test handling of Gemini API configuration errors."""
         with patch.dict('os.environ', {'GEMINI_API_KEY': 'test_key'}):
             with patch('google.generativeai.configure', side_effect=Exception("API Error")):
                 with pytest.raises(SystemExit):
                     CodeAnalyzer()
 
-        captured = capsys.readouterr()
-        assert 'Error configuring the Gemini API' in captured.out
+        assert 'Error configuring Gemini API' in caplog.text
 
     def test_get_basic_prompt(self, mock_env_with_api_key, mock_gemini_api):
         """Test _get_basic_prompt method."""
@@ -150,8 +149,11 @@ class TestCodeAnalyzerCore:
         assert 'AI analysis failed' in result['error']
         assert 'Unexpected AI error' in result['error']
 
-    def test_print_analysis_results_no_issues(self, mock_env_with_api_key, mock_gemini_api, capsys):
+    def test_print_analysis_results_no_issues(self, mock_env_with_api_key, mock_gemini_api, caplog):
         """Test printing results when no issues are found."""
+        import logging
+        caplog.set_level(logging.INFO)
+
         analyzer = CodeAnalyzer()
 
         results = [{
@@ -162,12 +164,14 @@ class TestCodeAnalyzerCore:
 
         analyzer.print_analysis_results(results)
 
-        captured = capsys.readouterr()
-        assert 'CODE ANALYSIS COMPLETE' in captured.out
-        assert 'No issues found' in captured.out
+        assert 'CODE ANALYSIS COMPLETE' in caplog.text
+        assert 'No issues found' in caplog.text
 
-    def test_print_analysis_results_with_issues(self, mock_env_with_api_key, mock_gemini_api, capsys):
+    def test_print_analysis_results_with_issues(self, mock_env_with_api_key, mock_gemini_api, caplog):
         """Test printing results with issues found."""
+        import logging
+        caplog.set_level(logging.INFO)
+
         analyzer = CodeAnalyzer()
 
         results = [{
@@ -192,14 +196,16 @@ class TestCodeAnalyzerCore:
 
         analyzer.print_analysis_results(results)
 
-        captured = capsys.readouterr()
-        assert 'CODE ANALYSIS COMPLETE' in captured.out
-        assert 'SQL Injection' in captured.out
-        assert 'Line 42' in captured.out
-        assert 'HIGH' in captured.out
+        assert 'CODE ANALYSIS COMPLETE' in caplog.text
+        assert 'SQL Injection' in caplog.text
+        assert 'Line 42' in caplog.text
+        assert 'HIGH' in caplog.text
 
-    def test_print_analysis_results_with_error(self, mock_env_with_api_key, mock_gemini_api, capsys):
+    def test_print_analysis_results_with_error(self, mock_env_with_api_key, mock_gemini_api, caplog):
         """Test printing results when analysis had errors."""
+        import logging
+        caplog.set_level(logging.INFO)
+
         analyzer = CodeAnalyzer()
 
         results = [{
@@ -211,9 +217,8 @@ class TestCodeAnalyzerCore:
 
         analyzer.print_analysis_results(results)
 
-        captured = capsys.readouterr()
-        assert 'Analysis failed' in captured.out
-        assert 'Raw Response Snippet' in captured.out
+        assert 'Analysis failed' in caplog.text
+        assert 'Raw Response Snippet' in caplog.text
 
     def test_save_results_json_success(self, mock_env_with_api_key, mock_gemini_api, tmp_path):
         """Test saving results to JSON file."""
@@ -229,7 +234,7 @@ class TestCodeAnalyzerCore:
             saved_data = json.load(f)
         assert saved_data == results
 
-    def test_save_results_json_error(self, mock_env_with_api_key, mock_gemini_api, capsys):
+    def test_save_results_json_error(self, mock_env_with_api_key, mock_gemini_api, caplog):
         """Test handling of errors when saving results."""
         analyzer = CodeAnalyzer()
 
@@ -238,8 +243,7 @@ class TestCodeAnalyzerCore:
 
         analyzer.save_results_json(results, invalid_path)
 
-        captured = capsys.readouterr()
-        assert 'Error saving results' in captured.out
+        assert 'Error saving results' in caplog.text
 
 
 class TestValidateOutputPath:
@@ -263,7 +267,7 @@ class TestValidateOutputPath:
             result = validate_output_path(str(output_file))
             assert result == output_file.resolve()
 
-    def test_validate_output_path_outside_cwd_exits(self, tmp_path, capsys):
+    def test_validate_output_path_outside_cwd_exits(self, tmp_path, caplog):
         """Test that path outside CWD causes exit."""
         output_file = Path("/tmp/outside/report.json")
 
@@ -271,8 +275,7 @@ class TestValidateOutputPath:
             with pytest.raises(SystemExit):
                 validate_output_path(str(output_file))
 
-        captured = capsys.readouterr()
-        assert 'outside the current directory tree' in captured.out
+        assert 'outside the current directory tree' in caplog.text
 
     def test_validate_output_path_existing_file_user_confirms(self, tmp_path):
         """Test overwrite confirmation when file exists."""
@@ -299,7 +302,7 @@ class TestValidateOutputPath:
 class TestMainFunction:
     """Test main() function."""
 
-    def test_main_no_files_found(self, mock_env_with_api_key, mock_gemini_api, tmp_path, capsys):
+    def test_main_no_files_found(self, mock_env_with_api_key, mock_gemini_api, tmp_path, caplog):
         """Test main when no files are found."""
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
@@ -310,11 +313,13 @@ class TestMainFunction:
                 with patch('codeaudit.FrameworkDetector'):
                     main()
 
-        captured = capsys.readouterr()
-        assert 'No supported code files found' in captured.out
+        assert 'No supported code files found' in caplog.text
 
-    def test_main_with_single_file(self, mock_env_with_api_key, mock_gemini_api, tmp_path, capsys):
+    def test_main_with_single_file(self, mock_env_with_api_key, mock_gemini_api, tmp_path, caplog):
         """Test main with a single file."""
+        import logging
+        caplog.set_level(logging.INFO)
+
         test_file = tmp_path / "test.py"
         test_file.write_text("def hello(): pass")
 
@@ -332,8 +337,7 @@ class TestMainFunction:
                         }
                         main()
 
-        captured = capsys.readouterr()
-        assert 'CODE ANALYSIS COMPLETE' in captured.out
+        assert 'CODE ANALYSIS COMPLETE' in caplog.text
 
     def test_main_with_output_file(self, mock_env_with_api_key, mock_gemini_api, tmp_path):
         """Test main with JSON output."""
@@ -359,8 +363,11 @@ class TestMainFunction:
 
         assert output_file.exists()
 
-    def test_main_with_max_files_limit(self, mock_env_with_api_key, mock_gemini_api, tmp_path, capsys):
+    def test_main_with_max_files_limit(self, mock_env_with_api_key, mock_gemini_api, tmp_path, caplog):
         """Test main with max-files limit."""
+        import logging
+        caplog.set_level(logging.INFO)
+
         # Create multiple files
         for i in range(5):
             test_file = tmp_path / f"test{i}.py"
@@ -379,8 +386,7 @@ class TestMainFunction:
                         }
                         main()
 
-        captured = capsys.readouterr()
-        assert 'analyzing first 2' in captured.out
+        assert 'Limiting analysis to first 2' in caplog.text
 
     def test_main_recursive_flag(self, mock_env_with_api_key, mock_gemini_api, tmp_path):
         """Test main with recursive directory scanning."""

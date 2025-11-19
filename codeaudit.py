@@ -75,7 +75,6 @@ class CodeAnalyzer:
             api_key = os.getenv('GEMINI_API_KEY')
             if not api_key:
                 logger.error("GEMINI_API_KEY environment variable not found")
-                print(f"{Fore.RED}Error: GEMINI_API_KEY environment variable not found.{Style.RESET_ALL}")
                 sys.exit(1)
 
             genai.configure(api_key=api_key)
@@ -93,7 +92,6 @@ class CodeAnalyzer:
 
         except Exception as e:
             logger.error("Error configuring Gemini API: %s", e, exc_info=True)
-            print(f"{Fore.RED}Error configuring the Gemini API: {e}{Style.RESET_ALL}")
             sys.exit(1)
 
         self.supported_extensions = {
@@ -109,11 +107,8 @@ class CodeAnalyzer:
             self.prompt_engine = PromptEngine()
             self.framework_detector = FrameworkDetector()
             logger.info("Prompt template system initialized successfully")
-            print(f"{Fore.GREEN}✓ Prompt template system initialized{Style.RESET_ALL}")
         except Exception as e:
             logger.warning("Could not initialize prompt system: %s. Falling back to basic prompts", e)
-            print(f"{Fore.YELLOW}Warning: Could not initialize prompt system: {e}{Style.RESET_ALL}")
-            print(f"{Fore.YELLOW}Falling back to basic prompts{Style.RESET_ALL}")
             self.prompt_engine = None
             self.framework_detector = None
 
@@ -227,7 +222,6 @@ JSON Schema:
             except Exception as e:
                 # Fallback to basic prompt if template system fails
                 logger.warning("Template system failed for %s, using basic prompt: %s", file_path.name, e)
-                print(f"{Fore.YELLOW}Warning: Template system failed, using basic prompt: {e}{Style.RESET_ALL}")
                 prompt = self._get_basic_prompt(file_path, code_content, language)
         else:
             # Use basic prompt if template system not initialized
@@ -271,13 +265,13 @@ JSON Schema:
         total_files = len(results)
         total_issues = sum(len(result.get('issues', [])) for result in results)
 
-        print(f"\n{Fore.CYAN}{'='*60}")
-        print("CODE ANALYSIS COMPLETE")
-        print(f"{'='*60}{Style.RESET_ALL}")
+        logger.info("\n%s%s", Fore.CYAN, '='*60)
+        logger.info("CODE ANALYSIS COMPLETE")
+        logger.info("%s%s", '='*60, Style.RESET_ALL)
 
-        print(f"\n📊 {Fore.YELLOW}Summary:{Style.RESET_ALL}")
-        print(f"   Files analyzed: {total_files}")
-        print(f"   Total issues found: {total_issues}")
+        logger.info("\n📊 %sSummary:%s", Fore.YELLOW, Style.RESET_ALL)
+        logger.info("   Files analyzed: %d", total_files)
+        logger.info("   Total issues found: %d", total_issues)
 
         severity_counts = {'high': 0, 'medium': 0, 'low': 0}
         for result in results:
@@ -286,28 +280,28 @@ JSON Schema:
                 severity_counts.setdefault(severity, 0)
                 severity_counts[severity] += 1
 
-        print(f"   🔴 High severity: {severity_counts.get('high', 0)}")
-        print(f"   🟡 Medium severity: {severity_counts.get('medium', 0)}")
-        print(f"   🟢 Low severity: {severity_counts.get('low', 0)}")
+        logger.info("   🔴 High severity: %d", severity_counts.get('high', 0))
+        logger.info("   🟡 Medium severity: %d", severity_counts.get('medium', 0))
+        logger.info("   🟢 Low severity: %d", severity_counts.get('low', 0))
 
         for result in results:
             file_str = result.get('file', 'Unknown file')
             if result.get('error'):
-                print(f"\n❌ {Fore.RED}{file_str}: {result['error']}{Style.RESET_ALL}")
+                logger.info("\n❌ %s%s: %s%s", Fore.RED, file_str, result['error'], Style.RESET_ALL)
                 if 'raw_response' in result:
-                    print(f"{Fore.YELLOW}   Raw Response Snippet: {result['raw_response']}{Style.RESET_ALL}")
+                    logger.info("%s   Raw Response Snippet: %s%s", Fore.YELLOW, result['raw_response'], Style.RESET_ALL)
                 continue
 
             issues = result.get('issues', [])
             if not issues:
-                print(f"\n✅ {Fore.GREEN}{file_str}: No issues found{Style.RESET_ALL}")
+                logger.info("\n✅ %s%s: No issues found%s", Fore.GREEN, file_str, Style.RESET_ALL)
                 continue
 
-            print(f"\n📁 {Fore.CYAN}{file_str}{Style.RESET_ALL}")
+            logger.info("\n📁 %s%s%s", Fore.CYAN, file_str, Style.RESET_ALL)
 
             if 'summary' in result:
                 summary = result['summary']
-                print(f"   📈 Maintainability: {summary.get('maintainability_score', 'N/A')}")
+                logger.info("   📈 Maintainability: %s", summary.get('maintainability_score', 'N/A'))
 
             for issue in issues:
                 severity = issue.get('severity', 'medium')
@@ -316,8 +310,8 @@ JSON Schema:
                 suggestion = issue.get('suggestion', 'No suggestion')
                 severity_color = Fore.RED if severity == 'high' else Fore.YELLOW if severity == 'medium' else Fore.GREEN
 
-                print(f"    - Line {line}: {severity_color}[{severity.upper()}]{Style.RESET_ALL} {description}")
-                print(f"      💡 {Fore.CYAN}{suggestion}{Style.RESET_ALL}")
+                logger.info("    - Line %s: %s[%s]%s %s", line, severity_color, severity.upper(), Style.RESET_ALL, description)
+                logger.info("      💡 %s%s%s", Fore.CYAN, suggestion, Style.RESET_ALL)
 
     def save_results_json(self, results: List[Dict[str, Any]], output_file: Path) -> None:
         """Save analysis results to JSON file"""
@@ -325,10 +319,8 @@ JSON Schema:
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(results, f, indent=2, ensure_ascii=False)
             logger.info("Results saved to %s", output_file)
-            print(f"\n💾 Results saved to: {output_file}")
         except Exception as e:
             logger.error("Error saving results to %s: %s", output_file, e, exc_info=True)
-            print(f"\n{Fore.RED}Error saving results to {output_file}: {e}{Style.RESET_ALL}")
 
 def validate_output_path(output_path_str: str) -> Optional[Path]:
     """Validate the output path to prevent directory traversal and overwrites."""
@@ -339,8 +331,7 @@ def validate_output_path(output_path_str: str) -> Optional[Path]:
     cwd = Path.cwd().resolve()
 
     if cwd not in path.parents and path.parent != cwd:
-        logger.error("Output path '%s' is outside current directory tree", output_path_str)
-        print(f"{Fore.RED}Error: Output path '{output_path_str}' is outside the current directory tree.{Style.RESET_ALL}")
+        logger.error("Output path '%s' is outside the current directory tree", output_path_str)
         sys.exit(1)
 
     if path.exists() and path.is_file():
@@ -348,7 +339,6 @@ def validate_output_path(output_path_str: str) -> Optional[Path]:
         overwrite = input(f"{Fore.YELLOW}Warning: Output file '{path}' already exists. Overwrite? (y/N): {Style.RESET_ALL}").lower()
         if overwrite != 'y':
             logger.info("User aborted overwrite")
-            print("Aborted.")
             sys.exit(0)
         logger.info("User confirmed overwrite")
 
@@ -385,25 +375,23 @@ Examples:
 
     validated_output_path = validate_output_path(args.output)
 
-    print(f"{Fore.CYAN}🔍 AI-Powered Code Analyzer{Style.RESET_ALL}")
-    print(f"Analyzing path: {args.path}")
+    logger.info("%s🔍 AI-Powered Code Analyzer%s", Fore.CYAN, Style.RESET_ALL)
+    logger.info("Analyzing path: %s", args.path)
 
     analyzer = CodeAnalyzer()
     files = analyzer.get_files_to_analyze(args.path, args.recursive)
 
     if not files:
         logger.warning("No supported code files found in: %s", args.path)
-        print(f"{Fore.YELLOW}No supported code files found in: {args.path}{Style.RESET_ALL}")
         return
 
     logger.info("Found %d files to analyze", len(files))
 
     if len(files) > args.max_files:
         logger.info("Limiting analysis to first %d files (found %d total)", args.max_files, len(files))
-        print(f"{Fore.YELLOW}Found {len(files)} files, analyzing first {args.max_files} (use --max-files to change){Style.RESET_ALL}")
         files = files[:args.max_files]
 
-    print(f"Files to analyze: {len(files)}")
+    logger.info("Files to analyze: %d", len(files))
 
     results = []
     for i, file_path in enumerate(files, 1):
