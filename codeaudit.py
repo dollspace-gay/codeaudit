@@ -17,6 +17,7 @@ from colorama import init, Fore, Style
 from prompts import PromptEngine
 from framework_detector import FrameworkDetector
 from few_shot_examples import FewShotExamples
+from cache import ResultCache
 
 # Initialize colorama for cross-platform colored output
 init()
@@ -67,10 +68,15 @@ class CodeAnalyzer:
         supported_extensions: Set of file extensions to analyze
         prompt_engine: Template engine for dynamic prompts (or None if unavailable)
         framework_detector: Detector for identifying frameworks (or None if unavailable)
+        cache: Result cache for storing/retrieving analysis results
     """
 
-    def __init__(self) -> None:
-        """Initialize the code analyzer with Gemini AI and prompt system"""
+    def __init__(self, enable_cache: bool = True) -> None:
+        """Initialize the code analyzer with Gemini AI and prompt system.
+
+        Args:
+            enable_cache: Enable result caching (default: True)
+        """
         try:
             api_key = os.getenv('GEMINI_API_KEY')
             if not api_key:
@@ -111,6 +117,15 @@ class CodeAnalyzer:
             logger.warning("Could not initialize prompt system: %s. Falling back to basic prompts", e)
             self.prompt_engine = None
             self.framework_detector = None
+
+        # Initialize result cache
+        self.cache: Optional[ResultCache] = None
+        if enable_cache:
+            try:
+                self.cache = ResultCache()
+                logger.info("Result cache enabled: %s", self.cache.cache_dir)
+            except Exception as e:
+                logger.warning("Could not initialize cache: %s. Caching disabled", e)
 
     def get_files_to_analyze(self, path: str, recursive: bool = True) -> List[Path]:
         """Get all code files in the specified path, respecting ignore patterns."""
@@ -169,7 +184,23 @@ JSON Schema:
 """
 
     def analyze_code_file(self, file_path: Path) -> Dict[str, Any]:
-        """Analyze a single code file for bugs and issues."""
+        """Analyze a single code file for bugs and issues.
+
+        Checks cache first if enabled. If cached result exists and is valid,
+        returns cached result. Otherwise performs analysis and caches result.
+
+        Args:
+            file_path: Path to file to analyze
+
+        Returns:
+            Analysis result dictionary with issues and summary
+        """
+        # Check cache first
+        if self.cache:
+            cached_result = self.cache.get(file_path)
+            if cached_result:
+                return cached_result
+
         try:
             # Add file size check to prevent Denial of Service
             file_size = file_path.stat().st_size
@@ -235,6 +266,11 @@ JSON Schema:
             analysis['file'] = str(file_path)
             logger.info("Successfully analyzed %s: %d issues found",
                        file_path.name, len(analysis.get('issues', [])))
+
+            # Cache the successful result
+            if self.cache:
+                self.cache.set(file_path, analysis)
+
             return analysis
 
         except json.JSONDecodeError as e:

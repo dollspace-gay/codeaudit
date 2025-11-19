@@ -7,11 +7,13 @@ Tests verify that:
 - Log messages are formatted properly
 - Environment variables control log level
 """
+# pylint: disable=import-outside-toplevel  # Imports isolated to test module loading
 
 import logging
 import os
 from io import StringIO
 from unittest.mock import patch
+
 import pytest
 
 
@@ -31,7 +33,7 @@ class TestLoggingSetup:
             from codeaudit import setup_logging
             logger = setup_logging()
 
-            assert logger.level == logging.INFO or logging.root.level == logging.INFO
+            assert logging.INFO in (logger.level, logging.root.level)
 
     def test_setup_logging_custom_level_debug(self):
         """Test that LOG_LEVEL environment variable sets DEBUG level."""
@@ -42,7 +44,7 @@ class TestLoggingSetup:
             logger = setup_logging()
 
             # Check that either logger or root has DEBUG level
-            assert logger.level == logging.DEBUG or logging.root.level == logging.DEBUG
+            assert logging.DEBUG in (logger.level, logging.root.level)
 
     def test_setup_logging_custom_level_warning(self):
         """Test that LOG_LEVEL environment variable sets WARNING level."""
@@ -52,7 +54,7 @@ class TestLoggingSetup:
             from codeaudit import setup_logging
             logger = setup_logging()
 
-            assert logger.level == logging.WARNING or logging.root.level == logging.WARNING
+            assert logging.WARNING in (logger.level, logging.root.level)
 
     def test_setup_logging_custom_level_error(self):
         """Test that LOG_LEVEL environment variable sets ERROR level."""
@@ -62,7 +64,7 @@ class TestLoggingSetup:
             from codeaudit import setup_logging
             logger = setup_logging()
 
-            assert logger.level == logging.ERROR or logging.root.level == logging.ERROR
+            assert logging.ERROR in (logger.level, logging.root.level)
 
     def test_setup_logging_invalid_level_defaults_to_info(self):
         """Test that invalid LOG_LEVEL defaults to INFO."""
@@ -73,7 +75,7 @@ class TestLoggingSetup:
             logger = setup_logging()
 
             # Should default to INFO for invalid level
-            assert logger.level == logging.INFO or logging.root.level == logging.INFO
+            assert logging.INFO in (logger.level, logging.root.level)
 
     def test_setup_logging_case_insensitive(self):
         """Test that LOG_LEVEL is case insensitive."""
@@ -83,7 +85,7 @@ class TestLoggingSetup:
             from codeaudit import setup_logging
             logger = setup_logging()
 
-            assert logger.level == logging.DEBUG or logging.root.level == logging.DEBUG
+            assert logging.DEBUG in (logger.level, logging.root.level)
 
 
 class TestLoggingMessages:

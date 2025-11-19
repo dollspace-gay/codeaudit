@@ -1,13 +1,15 @@
 """
 Tests for core codeaudit.py functionality.
 """
+# pylint: disable=unused-argument  # Fixtures needed for test setup
 
-import pytest
 import json
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, mock_open, MagicMock
-from io import StringIO
+from unittest.mock import Mock, patch
+
+import pytest
+
 from codeaudit import (
     CodeAnalyzer,
     validate_output_path,
@@ -437,4 +439,4 @@ class TestMainEntryPoint:
                             pass  # main() might call sys.exit()
 
                         # Main should have been called during module load
-                        assert mock_main.called or True  # Module loads main via import
+                        # Module loads main via import - test passes if no exception

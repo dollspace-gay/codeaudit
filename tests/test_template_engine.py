@@ -2,10 +2,10 @@
 Tests for prompts/template_engine.py module.
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch
-from jinja2 import TemplateNotFound
+
+import pytest
+
 from prompts.template_engine import PromptEngine
 
 
@@ -277,9 +277,9 @@ Examples count: {{ few_shot_examples|length }}
         engine = PromptEngine(template_dir=template_dir)
         templates = engine.list_available_templates()
 
-        assert templates['languages'] == []
-        assert templates['frameworks'] == []
-        assert templates['threat_models'] == []
+        assert not templates['languages']
+        assert not templates['frameworks']
+        assert not templates['threat_models']
 
     def test_list_available_templates_missing_directories(self, tmp_path):
         """Test listing templates when directories don't exist."""
@@ -289,9 +289,9 @@ Examples count: {{ few_shot_examples|length }}
         engine = PromptEngine(template_dir=template_dir)
         templates = engine.list_available_templates()
 
-        assert templates['languages'] == []
-        assert templates['frameworks'] == []
-        assert templates['threat_models'] == []
+        assert not templates['languages']
+        assert not templates['frameworks']
+        assert not templates['threat_models']
 
     def test_template_priority_order(self, tmp_path):
         """Test that template selection follows correct priority order."""

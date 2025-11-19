@@ -7,12 +7,15 @@ Tests verify that:
 - Errors and warnings are logged appropriately
 - Framework detection is logged
 """
+# pylint: disable=unused-argument,unused-variable,import-outside-toplevel
+# Fixtures needed for test setup, variables for side effects, imports to isolate tests
 
 import logging
-import pytest
-from pathlib import Path
-from unittest.mock import patch, Mock, ANY
 from io import StringIO
+from pathlib import Path
+from unittest.mock import patch, Mock
+
+import pytest
 
 
 class TestCodeAnalyzerLogging:

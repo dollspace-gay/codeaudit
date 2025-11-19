@@ -5,6 +5,7 @@ A powerful command-line tool that leverages Google's Gemini AI to perform compre
 ## Key Features
 
 - **AI-Powered Analysis**: Uses Google Gemini 2.5 Flash for intelligent vulnerability detection
+- **Result Caching**: SHA-256-based caching avoids re-analyzing unchanged files, improving performance
 - **Language-Specific Prompts**: Specialized analysis for Python, JavaScript, TypeScript, Java, C/C++, Go, Rust, PHP, Ruby, Swift, Kotlin, Scala, and Dart
 - **Framework-Aware**: Detects and applies framework-specific security checks (Django, Flask, FastAPI, React, Express, Spring, etc.)
 - **Few-Shot Learning**: Provides vulnerability examples to improve AI accuracy
@@ -14,12 +15,15 @@ A powerful command-line tool that leverages Google's Gemini AI to perform compre
 
 ## How It Works
 
-CodeAudit operates in a four-step process:
+CodeAudit operates in a five-step process:
 
 1. **File Discovery**: Scans directories for supported code files, respecting ignore patterns
-2. **Framework Detection**: Identifies frameworks and selects appropriate security checks
-3. **AI Analysis**: Sends code to Gemini AI with specialized prompts for deep analysis
-4. **Reporting**: Generates detailed reports with severity levels, descriptions, and fix suggestions
+2. **Cache Check**: Computes file hash (SHA-256) and retrieves cached results if file unchanged
+3. **Framework Detection**: Identifies frameworks and selects appropriate security checks
+4. **AI Analysis**: Sends code to Gemini AI with specialized prompts for deep analysis
+5. **Caching & Reporting**: Caches results and generates detailed reports with severity levels, descriptions, and fix suggestions
+
+**Note**: Cache is stored in `~/.cache/codeaudit/` and automatically invalidates when files are modified.
 
 ## Requirements
 

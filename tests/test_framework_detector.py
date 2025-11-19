@@ -2,9 +2,9 @@
 Tests for framework_detector.py module.
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import patch
+
 from framework_detector import FrameworkDetector
 
 
@@ -119,7 +119,7 @@ def multiply(x, y):
     return x * y
 """
         frameworks = detector.detect_frameworks(code, 'python')
-        assert frameworks == []
+        assert not frameworks
 
     def test_detect_frameworks_multiple(self):
         """Test detection of multiple frameworks in the same code."""
@@ -152,7 +152,7 @@ engine = create_engine('postgresql://localhost/db')
         detector = FrameworkDetector()
         code = "some code here"
         frameworks = detector.detect_frameworks(code, 'unsupported_lang')
-        assert frameworks == []
+        assert not frameworks
 
 
 class TestGetThreatModelsForFrameworks:
@@ -182,12 +182,12 @@ class TestGetThreatModelsForFrameworks:
     def test_empty_frameworks_return_empty_list(self):
         """Test that empty framework list returns empty threat models."""
         threat_models = FrameworkDetector.get_threat_models_for_frameworks([])
-        assert threat_models == []
+        assert not threat_models
 
     def test_unknown_frameworks_return_empty_list(self):
         """Test that unknown frameworks return empty threat models."""
         threat_models = FrameworkDetector.get_threat_models_for_frameworks(['unknown-framework'])
-        assert threat_models == []
+        assert not threat_models
 
     def test_multiple_threat_models_no_duplicates(self):
         """Test that multiple frameworks don't create duplicate threat models."""
@@ -252,7 +252,7 @@ app.get('/', (req, res) => {
         test_file.write_text("This is a text file")
 
         frameworks = detector.detect_from_file(test_file)
-        assert frameworks == []
+        assert not frameworks
 
     def test_detect_from_file_nonexistent_file(self):
         """Test handling of non-existent files."""
@@ -260,7 +260,7 @@ app.get('/', (req, res) => {
 
         fake_file = Path("nonexistent.py")
         frameworks = detector.detect_from_file(fake_file)
-        assert frameworks == []
+        assert not frameworks
 
     def test_detect_from_file_unreadable_file(self, tmp_path):
         """Test handling of file read errors."""
@@ -272,7 +272,7 @@ app.get('/', (req, res) => {
         # Mock file read to raise exception
         with patch('builtins.open', side_effect=IOError("Permission denied")):
             frameworks = detector.detect_from_file(test_file)
-            assert frameworks == []
+            assert not frameworks
 
     def test_detect_frameworks_with_invalid_language(self):
         """Test error handling for invalid language enum."""
@@ -284,7 +284,7 @@ app.get('/', (req, res) => {
         # Force an exception by passing invalid data
         with patch('framework_detector.Language', side_effect=ValueError("Invalid")):
             frameworks = detector.detect_frameworks(code, 'invalid_lang')
-            assert frameworks == []
+            assert not frameworks
 
     def test_detect_frameworks_with_language_enum_but_no_patterns(self):
         """Test detecting frameworks with valid language enum but no patterns defined."""
@@ -297,4 +297,4 @@ app.get('/', (req, res) => {
         }
         """
         frameworks = detector.detect_frameworks(rust_code, "rust")
-        assert frameworks == []
+        assert not frameworks

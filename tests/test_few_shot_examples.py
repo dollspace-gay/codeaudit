@@ -2,7 +2,6 @@
 Tests for few_shot_examples.py module.
 """
 
-import pytest
 from few_shot_examples import FewShotExamples, VulnerabilityExample
 
 
