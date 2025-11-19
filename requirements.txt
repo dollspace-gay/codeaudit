@@ -1,5 +1,8 @@
 # This file lists the Python packages required to run the AI code scanner.
 # Install them using the command: pip install -r requirements.txt
 
-google-generativeai
-colorama
+# Google Gemini AI SDK for code analysis
+google-generativeai==0.8.3
+
+# Cross-platform colored terminal output
+colorama==0.4.6
