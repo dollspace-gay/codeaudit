@@ -8,7 +8,7 @@ google-generativeai==0.8.3
 colorama==0.4.6
 
 # Template engine for dynamic prompt generation
-jinja2==3.1.4
+jinja2==3.1.6
 
 # YAML configuration file parsing
 pyyaml==6.0.1

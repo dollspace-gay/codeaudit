@@ -9,7 +9,7 @@ pytest-mock==3.12.0
 # Code quality tools
 pylint==3.0.3
 mypy==1.8.0
-black==24.1.1
+black==24.3.0
 isort==5.13.2
 
 # Type stubs for better type checking
