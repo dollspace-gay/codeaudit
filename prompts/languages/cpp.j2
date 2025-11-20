@@ -66,8 +66,14 @@ JSON Schema:
             "severity": "high|medium|low",
             "line": <line_number>,
             "description": "Clear description with C/C++ memory safety context.",
-            "suggestion": "Specific C/C++ fix using modern practices (smart pointers, RAII, bounds checking).",
-            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-120' for buffer overflow)"
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-120' for buffer overflow)",
+            "fix": {
+                "before_code": "C/C++ code snippet showing the vulnerable/problematic code from the file",
+                "after_code": "C/C++ code snippet showing the corrected code using modern practices (smart pointers, RAII, bounds checking)",
+                "explanation": "Detailed explanation of why this fix resolves the issue, including memory safety guarantees and best practices",
+                "references": ["Optional array of URLs to C++ docs, CWE advisories, or security resources"]
+            }
         }
     ],
     "summary": {

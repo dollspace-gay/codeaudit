@@ -91,8 +91,14 @@ JSON Schema:
             "severity": "high|medium|low",
             "line": <line_number>,
             "description": "Clear description with PHP-specific context.",
-            "suggestion": "Specific PHP code fix following secure coding practices.",
-            "cwe_id": "CWE identifier if applicable"
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable",
+            "fix": {
+                "before_code": "PHP code snippet showing the vulnerable/problematic code from the file",
+                "after_code": "PHP code snippet showing the corrected code with the fix applied, following secure coding practices",
+                "explanation": "Detailed explanation of why this fix resolves the issue, including PHP-specific security properties",
+                "references": ["Optional array of URLs to PHP docs, OWASP resources, or security advisories"]
+            }
         }
     ],
     "summary": {

@@ -415,6 +415,263 @@ class TestMainFunction:
         assert mock_analyze.called
 
 
+class TestProgressBar:
+    """Test progress bar functionality."""
+
+    def test_main_with_progress_bar_enabled(self, mock_env_with_api_key, mock_gemini_api, tmp_path):
+        """Test that progress bar is displayed by default."""
+        # Create test files
+        for i in range(3):
+            test_file = tmp_path / f"test{i}.py"
+            test_file.write_text(f"def func{i}(): pass")
+
+        test_args = ['codeaudit.py', str(tmp_path)]
+
+        with patch.object(sys, 'argv', test_args):
+            with patch('codeaudit.PromptEngine'):
+                with patch('codeaudit.FrameworkDetector'):
+                    with patch('codeaudit.CodeAnalyzer.analyze_code_file') as mock_analyze:
+                        with patch('codeaudit.tqdm') as mock_tqdm:
+                            # Configure tqdm mock to return an iterable
+                            mock_tqdm.return_value = iter([
+                                tmp_path / "test0.py",
+                                tmp_path / "test1.py",
+                                tmp_path / "test2.py"
+                            ])
+
+                            mock_analyze.return_value = {
+                                'file': 'test.py',
+                                'issues': [],
+                                'summary': {'total_issues': 0}
+                            }
+
+                            main()
+
+                            # Verify tqdm was called (progress bar enabled)
+                            assert mock_tqdm.called
+
+    def test_main_with_progress_bar_disabled(self, mock_env_with_api_key, mock_gemini_api, tmp_path):
+        """Test that progress bar is disabled with --no-progress flag."""
+        # Create test files
+        for i in range(3):
+            test_file = tmp_path / f"test{i}.py"
+            test_file.write_text(f"def func{i}(): pass")
+
+        test_args = ['codeaudit.py', str(tmp_path), '--no-progress']
+
+        with patch.object(sys, 'argv', test_args):
+            with patch('codeaudit.PromptEngine'):
+                with patch('codeaudit.FrameworkDetector'):
+                    with patch('codeaudit.CodeAnalyzer.analyze_code_file') as mock_analyze:
+                        with patch('codeaudit.tqdm') as mock_tqdm:
+                            mock_analyze.return_value = {
+                                'file': 'test.py',
+                                'issues': [],
+                                'summary': {'total_issues': 0}
+                            }
+
+                            main()
+
+                            # Verify tqdm was NOT called (progress bar disabled)
+                            assert not mock_tqdm.called
+
+
+class TestFixSuggestions:
+    """Test automated fix suggestion feature."""
+
+    def test_fix_suggestions_in_response(self, mock_env_with_api_key, mock_gemini_api, tmp_path):
+        """Test that fix suggestions are included in AI response and properly parsed."""
+        test_file = tmp_path / "vulnerable.py"
+        test_file.write_text("""
+def query_user(username):
+    query = f"SELECT * FROM users WHERE name = '{username}'"
+    return query
+""")
+
+        # Mock response with fix suggestion
+        mock_response = Mock()
+        mock_response.text = json.dumps({
+            "issues": [
+                {
+                    "type": "security",
+                    "severity": "high",
+                    "line": 2,
+                    "description": "SQL injection vulnerability",
+                    "suggestion": "Use parameterized queries",
+                    "fix": {
+                        "before_code": "query = f\"SELECT * FROM users WHERE name = '{username}'\"",
+                        "after_code": "query = \"SELECT * FROM users WHERE name = ?\"\\nparams = (username,)",
+                        "explanation": "Parameterized queries prevent SQL injection by separating SQL code from data",
+                        "references": ["https://owasp.org/www-community/attacks/SQL_Injection"]
+                    }
+                }
+            ],
+            "summary": {
+                "total_issues": 1,
+                "high_severity": 1,
+                "medium_severity": 0,
+                "low_severity": 0,
+                "maintainability_score": "6"
+            }
+        })
+        mock_gemini_api['instance'].generate_content.return_value = mock_response
+
+        analyzer = CodeAnalyzer(enable_cache=False)
+        result = analyzer.analyze_code_file(test_file)
+
+        # Verify fix suggestion is in the result
+        assert 'issues' in result
+        assert len(result['issues']) == 1
+        issue = result['issues'][0]
+        assert 'fix' in issue
+        assert isinstance(issue['fix'], dict)
+        assert 'before_code' in issue['fix']
+        assert 'after_code' in issue['fix']
+        assert 'explanation' in issue['fix']
+        assert 'references' in issue['fix']
+        assert len(issue['fix']['references']) > 0
+
+    def test_fix_suggestions_display(self, mock_env_with_api_key, mock_gemini_api, tmp_path):
+        """Test that fix suggestions are properly displayed in output."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def test(): pass")
+
+        # Create analyzer
+        analyzer = CodeAnalyzer(enable_cache=False)
+
+        # Create test result with fix suggestion
+        test_results = [{
+            'file': str(test_file),
+            'issues': [{
+                'type': 'security',
+                'severity': 'high',
+                'line': 10,
+                'description': 'SQL injection',
+                'suggestion': 'Use parameterized queries',
+                'fix': {
+                    'before_code': "query = f\"SELECT * FROM users WHERE id = {user_id}\"",
+                    'after_code': "query = \"SELECT * FROM users WHERE id = ?\"",
+                    'explanation': 'Prevents SQL injection',
+                    'references': ['https://example.com/sql-injection']
+                }
+            }],
+            'summary': {
+                'total_issues': 1,
+                'high_severity': 1,
+                'medium_severity': 0,
+                'low_severity': 0,
+                'maintainability_score': '7'
+            }
+        }]
+
+        # Mock logger to capture calls
+        with patch('codeaudit.logger') as mock_logger:
+            analyzer.print_analysis_results(test_results)
+
+            # Collect all logger.info() calls
+            all_calls = [str(call) for call in mock_logger.info.call_args_list]
+            all_output = ' '.join(all_calls)
+
+            # Verify fix suggestion elements are logged
+            assert any('Automated Fix' in str(call) or '🔧' in str(call) for call in all_calls), \
+                "Fix header not found in logger output"
+            assert any('Before' in str(call) for call in all_calls), \
+                "Before label not found in logger output"
+            assert any('After' in str(call) for call in all_calls), \
+                "After label not found in logger output"
+            assert any('Why' in str(call) or 'Prevents SQL injection' in str(call) for call in all_calls), \
+                "Explanation not found in logger output"
+            assert any('https://example.com/sql-injection' in str(call) for call in all_calls), \
+                "References not found in logger output"
+
+    def test_fix_suggestions_optional(self, mock_env_with_api_key, mock_gemini_api, tmp_path):
+        """Test that issues without fix suggestions still work."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def test(): pass")
+
+        # Mock response without fix suggestion
+        mock_response = Mock()
+        mock_response.text = json.dumps({
+            "issues": [
+                {
+                    "type": "smell",
+                    "severity": "low",
+                    "line": 1,
+                    "description": "Function too short",
+                    "suggestion": "Add docstring"
+                    # No fix field
+                }
+            ],
+            "summary": {
+                "total_issues": 1,
+                "high_severity": 0,
+                "medium_severity": 0,
+                "low_severity": 1,
+                "maintainability_score": "8"
+            }
+        })
+        mock_gemini_api['instance'].generate_content.return_value = mock_response
+
+        analyzer = CodeAnalyzer(enable_cache=False)
+        result = analyzer.analyze_code_file(test_file)
+
+        # Verify it works without fix field
+        assert 'issues' in result
+        assert len(result['issues']) == 1
+        issue = result['issues'][0]
+        assert 'fix' not in issue or issue.get('fix') is None
+
+    def test_fix_suggestions_malformed(self, mock_env_with_api_key, mock_gemini_api, tmp_path, capsys):
+        """Test handling of malformed fix suggestions."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def test(): pass")
+
+        analyzer = CodeAnalyzer(enable_cache=False)
+
+        # Test with various malformed fix data
+        malformed_results = [{
+            'file': str(test_file),
+            'issues': [
+                {
+                    'type': 'bug',
+                    'severity': 'medium',
+                    'line': 5,
+                    'description': 'Null pointer',
+                    'suggestion': 'Add null check',
+                    'fix': {
+                        # Missing before_code and after_code
+                        'explanation': 'Check for null values'
+                    }
+                },
+                {
+                    'type': 'bug',
+                    'severity': 'low',
+                    'line': 10,
+                    'description': 'Type error',
+                    'suggestion': 'Add type hint',
+                    'fix': None  # Null fix
+                },
+                {
+                    'type': 'bug',
+                    'severity': 'low',
+                    'line': 15,
+                    'description': 'Missing return',
+                    'suggestion': 'Add return statement',
+                    'fix': "not a dict"  # Wrong type
+                }
+            ],
+            'summary': {'total_issues': 3, 'high_severity': 0, 'medium_severity': 1, 'low_severity': 2, 'maintainability_score': '7'}
+        }]
+
+        # Should not raise an exception
+        try:
+            analyzer.print_analysis_results(malformed_results)
+            # If we get here, test passed
+            assert True
+        except Exception as e:
+            pytest.fail(f"print_analysis_results raised exception with malformed fix data: {e}")
+
+
 class TestMainEntryPoint:
     """Test __main__ entry point."""
 

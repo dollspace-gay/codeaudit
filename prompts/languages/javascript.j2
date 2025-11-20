@@ -110,8 +110,14 @@ JSON Schema:
             "severity": "high|medium|low",
             "line": <line_number>,
             "description": "Clear description with JavaScript-specific context.",
-            "suggestion": "Specific JavaScript code fix with example.",
-            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-79' for XSS)"
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-79' for XSS)",
+            "fix": {
+                "before_code": "JavaScript code snippet showing the vulnerable/problematic code from the file",
+                "after_code": "JavaScript code snippet showing the corrected code with the fix applied, following modern ES6+ best practices",
+                "explanation": "Detailed explanation of why this fix resolves the issue, including JavaScript-specific security/correctness properties",
+                "references": ["Optional array of URLs to MDN docs, OWASP resources, or security advisories"]
+            }
         }
     ],
     "summary": {

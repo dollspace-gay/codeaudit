@@ -123,6 +123,7 @@ python codeaudit.py [PATH] [OPTIONS]
 - `--output FILE`, `-o FILE` - Save results to JSON file
 - `--max-files N` - Maximum number of files to analyze
 - `--no-cache` - Disable result caching
+- `--no-progress` - Disable progress bar display
 
 ### Examples
 
@@ -433,7 +434,16 @@ Use `--output report.json` to save structured results:
       "severity": "high",
       "line": 42,
       "description": "SQL Injection vulnerability via string concatenation",
-      "suggestion": "Use parameterized queries: cursor.execute(\"SELECT * FROM users WHERE id = %s\", (user_id,))"
+      "suggestion": "Use parameterized queries",
+      "fix": {
+        "before_code": "cursor.execute(f\"SELECT * FROM users WHERE id = {user_id}\")",
+        "after_code": "cursor.execute(\"SELECT * FROM users WHERE id = %s\", (user_id,))",
+        "explanation": "Parameterized queries prevent SQL injection by separating SQL code from data, ensuring user input is always treated as data rather than executable code.",
+        "references": [
+          "https://owasp.org/www-community/attacks/SQL_Injection",
+          "https://cheatsheetseries.owasp.org/cheatsheets/Query_Parameterization_Cheat_Sheet.html"
+        ]
+      }
     }
   ],
   "summary": {
@@ -445,6 +455,36 @@ Use `--output report.json` to save structured results:
   }
 }
 ```
+
+### Automated Fix Suggestions
+
+CodeAudit now provides **automated fix suggestions** with before/after code examples for identified issues:
+
+**Console Output with Fix:**
+```
+📁 ./src/auth.py
+   📈 Maintainability: 7/10
+    - Line 42: [HIGH] SQL Injection vulnerability via string concatenation
+      💡 Use parameterized queries
+      🔧 Automated Fix:
+         Before:
+           cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
+         After:
+           cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+         Why: Parameterized queries prevent SQL injection by separating SQL code from data
+         References:
+           - https://owasp.org/www-community/attacks/SQL_Injection
+```
+
+**Fix Suggestion Structure:**
+
+Each fix includes:
+- **before_code**: The vulnerable/problematic code snippet
+- **after_code**: The corrected code with the fix applied
+- **explanation**: Detailed explanation of why the fix resolves the issue
+- **references**: Array of URLs to documentation, security advisories, or best practices
+
+Fix suggestions are language-aware and follow each language's best practices and idioms.
 
 ## Development
 

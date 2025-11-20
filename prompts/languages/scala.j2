@@ -57,8 +57,14 @@ JSON Schema:
             "severity": "high|medium|low",
             "line": <line_number>,
             "description": "Clear description with Scala-specific context.",
-            "suggestion": "Specific Scala code fix following functional programming principles.",
-            "cwe_id": "CWE identifier if applicable"
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable",
+            "fix": {
+                "before_code": "Scala code snippet showing the problematic code from the file",
+                "after_code": "Scala code snippet showing the corrected code with the fix applied, following functional programming principles",
+                "explanation": "Detailed explanation of why this fix resolves the issue, including Scala type safety and functional patterns",
+                "references": ["Optional array of URLs to Scala docs, security advisories, or best practices"]
+            }
         }
     ],
     "summary": {

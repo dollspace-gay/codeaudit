@@ -101,8 +101,14 @@ JSON Schema:
             "severity": "high|medium|low",
             "line": <line_number>,
             "description": "Clear description with TypeScript-specific context.",
-            "suggestion": "Specific TypeScript code fix with proper type annotations.",
-            "cwe_id": "CWE identifier if applicable"
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable",
+            "fix": {
+                "before_code": "TypeScript code snippet showing the vulnerable/problematic code from the file",
+                "after_code": "TypeScript code snippet showing the corrected code with proper type annotations and the fix applied",
+                "explanation": "Detailed explanation of why this fix resolves the issue, including TypeScript type safety benefits",
+                "references": ["Optional array of URLs to TypeScript docs, OWASP resources, or security advisories"]
+            }
         }
     ],
     "summary": {

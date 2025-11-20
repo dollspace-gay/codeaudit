@@ -14,6 +14,7 @@ from typing import List, Dict, Any, Optional
 import google.generativeai as genai
 from google.generativeai.types import generation_types
 from colorama import init, Fore, Style
+from tqdm import tqdm
 from prompts import PromptEngine
 from framework_detector import FrameworkDetector
 from few_shot_examples import FewShotExamples
@@ -171,7 +172,13 @@ JSON Schema:
             "severity": "high|medium|low",
             "line": <line_number>,
             "description": "Clear description of the issue.",
-            "suggestion": "Specific refactoring suggestion with a code example if applicable."
+            "suggestion": "Brief one-line suggestion.",
+            "fix": {{
+                "before_code": "Code snippet showing the vulnerable/problematic code from the file",
+                "after_code": "Code snippet showing the corrected code with the fix applied",
+                "explanation": "Detailed explanation of why this fix resolves the issue and what security/correctness properties it provides",
+                "references": ["Optional array of URLs to documentation, CVEs, or security advisories"]
+            }}
         }}
     ],
     "summary": {{
@@ -350,6 +357,38 @@ JSON Schema:
                 logger.info("    - Line %s: %s[%s]%s %s", line, severity_color, severity.upper(), Style.RESET_ALL, description)
                 logger.info("      💡 %s%s%s", Fore.CYAN, suggestion, Style.RESET_ALL)
 
+                # Display automated fix suggestion if available
+                fix = issue.get('fix')
+                if fix and isinstance(fix, dict):
+                    logger.info("      %s🔧 Automated Fix:%s", Fore.GREEN, Style.RESET_ALL)
+
+                    # Display before code
+                    before_code = fix.get('before_code', '')
+                    if before_code:
+                        logger.info("         %sBefore:%s", Fore.RED, Style.RESET_ALL)
+                        for code_line in before_code.strip().split('\n'):
+                            logger.info("         %s  %s%s", Fore.RED, code_line, Style.RESET_ALL)
+
+                    # Display after code
+                    after_code = fix.get('after_code', '')
+                    if after_code:
+                        logger.info("         %sAfter:%s", Fore.GREEN, Style.RESET_ALL)
+                        for code_line in after_code.strip().split('\n'):
+                            logger.info("         %s  %s%s", Fore.GREEN, code_line, Style.RESET_ALL)
+
+                    # Display explanation
+                    explanation = fix.get('explanation', '')
+                    if explanation:
+                        logger.info("         %sWhy:%s %s", Fore.CYAN, Style.RESET_ALL, explanation)
+
+                    # Display references
+                    references = fix.get('references', [])
+                    if references and isinstance(references, list) and len(references) > 0:
+                        logger.info("         %sReferences:%s", Fore.MAGENTA, Style.RESET_ALL)
+                        for ref in references:
+                            if ref:  # Skip empty strings
+                                logger.info("           - %s", ref)
+
     def save_results_json(self, results: List[Dict[str, Any]], output_file: Path) -> None:
         """Save analysis results to JSON file"""
         try:
@@ -407,6 +446,8 @@ Examples:
                        help='Maximum number of files to analyze')
     parser.add_argument('--no-cache', action='store_true',
                        help='Disable result caching')
+    parser.add_argument('--no-progress', action='store_true',
+                       help='Disable progress bar display')
 
     args = parser.parse_args()
 
@@ -456,14 +497,23 @@ Examples:
     logger.info("Files to analyze: %d", len(files))
 
     results = []
-    for i, file_path in enumerate(files, 1):
-        sys.stdout.write(f"\r🔍 Analyzing {i}/{len(files)}: {file_path.name}{' ' * 20}")
-        sys.stdout.flush()
-        logger.debug("Processing file %d/%d: %s", i, len(files), file_path)
+    # Use tqdm progress bar unless --no-progress is specified
+    file_iterator = files if args.no_progress else tqdm(
+        files,
+        desc="🔍 Analyzing files",
+        unit="file",
+        bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]',
+        colour='cyan'
+    )
+
+    for file_path in file_iterator:
+        if not args.no_progress and hasattr(file_iterator, 'set_postfix_str'):
+            # Update progress bar description with current file
+            file_iterator.set_postfix_str(f"{file_path.name[:40]}")
+        logger.debug("Processing file: %s", file_path)
         result = analyzer.analyze_code_file(file_path)
         results.append(result)
 
-    sys.stdout.write("\n")
     logger.info("Analysis complete: %d files processed", len(results))
 
     analyzer.print_analysis_results(results)

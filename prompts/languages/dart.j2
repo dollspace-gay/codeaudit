@@ -58,8 +58,14 @@ JSON Schema:
             "severity": "high|medium|low",
             "line": <line_number>,
             "description": "Clear description with Dart/Flutter-specific context.",
-            "suggestion": "Specific Dart code fix following Flutter security best practices.",
-            "cwe_id": "CWE identifier if applicable"
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable",
+            "fix": {
+                "before_code": "Dart code snippet showing the vulnerable/problematic code from the file",
+                "after_code": "Dart code snippet showing the corrected code with the fix applied, following Flutter security best practices",
+                "explanation": "Detailed explanation of why this fix resolves the issue, including Dart null-safety and Flutter security properties",
+                "references": ["Optional array of URLs to Dart docs, Flutter security guides, or OWASP resources"]
+            }
         }
     ],
     "summary": {

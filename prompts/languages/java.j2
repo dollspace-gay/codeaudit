@@ -94,8 +94,14 @@ JSON Schema:
             "severity": "high|medium|low",
             "line": <line_number>,
             "description": "Clear description with Java-specific context.",
-            "suggestion": "Specific Java code fix following best practices.",
-            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-89' for SQL injection)"
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-89' for SQL injection)",
+            "fix": {
+                "before_code": "Java code snippet showing the vulnerable/problematic code from the file",
+                "after_code": "Java code snippet showing the corrected code with the fix applied, following Java best practices",
+                "explanation": "Detailed explanation of why this fix resolves the issue, including Java-specific security/correctness properties",
+                "references": ["Optional array of URLs to Java docs, OWASP resources, or security advisories"]
+            }
         }
     ],
     "summary": {

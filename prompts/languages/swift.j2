@@ -78,8 +78,14 @@ JSON Schema:
             "severity": "high|medium|low",
             "line": <line_number>,
             "description": "Clear description with Swift/iOS-specific context.",
-            "suggestion": "Specific Swift code fix following iOS security best practices.",
-            "cwe_id": "CWE identifier if applicable"
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable",
+            "fix": {
+                "before_code": "Swift code snippet showing the vulnerable/problematic code from the file",
+                "after_code": "Swift code snippet showing the corrected code with the fix applied, following iOS security best practices",
+                "explanation": "Detailed explanation of why this fix resolves the issue, including Swift safety features and iOS security properties",
+                "references": ["Optional array of URLs to Swift docs, Apple security guides, or OWASP resources"]
+            }
         }
     ],
     "summary": {

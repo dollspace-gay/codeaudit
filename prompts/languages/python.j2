@@ -93,8 +93,14 @@ JSON Schema:
             "severity": "high|medium|low",
             "line": <line_number>,
             "description": "Clear description of the issue with Python-specific context.",
-            "suggestion": "Specific Python code fix with example.",
-            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-89' for SQL injection)"
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-89' for SQL injection)",
+            "fix": {
+                "before_code": "Python code snippet showing the vulnerable/problematic code from the file",
+                "after_code": "Python code snippet showing the corrected code with the fix applied, following PEP 8",
+                "explanation": "Detailed explanation of why this fix resolves the issue, including Python-specific security/correctness properties",
+                "references": ["Optional array of URLs to Python docs, PEPs, security advisories, or OWASP resources"]
+            }
         }
     ],
     "summary": {

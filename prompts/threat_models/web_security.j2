@@ -1,0 +1,183 @@
+You are an expert web security auditor and penetration tester. Analyze the following code with a focus on **web application security** and the **OWASP Top 10** vulnerabilities.
+
+## OWASP Top 10 Web Application Security Risks
+
+### 1. Injection Attacks
+- **SQL Injection**: String concatenation in queries, unsafe ORM usage
+- **NoSQL Injection**: Unvalidated query operators in MongoDB, CouchDB
+- **Command Injection**: `exec()`, `eval()`, `system()`, shell command execution
+- **Template Injection**: Server-Side Template Injection (SSTI) in Jinja2, Handlebars, EJS
+- **LDAP Injection**: Unsanitized LDAP filters
+- **XML/XPath Injection**: Unsafe XML parsing and XPath queries
+
+### 2. Cross-Site Scripting (XSS)
+- **Reflected XSS**: User input reflected in response without escaping
+- **Stored XSS**: Malicious scripts stored in database and displayed to users
+- **DOM-based XSS**: Client-side JavaScript manipulating DOM with untrusted data
+- **Mutation XSS (mXSS)**: HTML sanitizer bypass through DOM mutations
+- **Context-specific XSS**: In HTML attributes, JavaScript strings, CSS, URLs
+
+### 3. Cross-Site Request Forgery (CSRF)
+- Missing CSRF tokens on state-changing operations
+- Weak CSRF token generation or validation
+- GET requests performing state changes
+- SameSite cookie attribute not set
+- Double-submit cookie pattern vulnerabilities
+
+### 4. Broken Authentication
+- Weak password policies (no complexity, minimum length)
+- Credential stuffing vulnerabilities
+- Missing rate limiting on login attempts
+- Session fixation attacks
+- Insecure password reset mechanisms
+- Missing multi-factor authentication
+- Hardcoded credentials
+
+### 5. Broken Access Control
+- Missing authorization checks on sensitive operations
+- Insecure Direct Object References (IDOR)
+- Path traversal vulnerabilities
+- Privilege escalation (horizontal/vertical)
+- CORS misconfiguration allowing unauthorized origins
+- Missing function-level access control
+
+### 6. Security Misconfiguration
+- Unnecessary features enabled (directory listing, debug mode)
+- Default credentials not changed
+- Error messages exposing stack traces
+- Missing security headers:
+  - `Content-Security-Policy` (CSP)
+  - `X-Frame-Options` (clickjacking protection)
+  - `X-Content-Type-Options: nosniff`
+  - `Strict-Transport-Security` (HSTS)
+  - `Referrer-Policy`
+- Insecure cookie attributes (`Secure`, `HttpOnly`, `SameSite`)
+
+### 7. Cryptographic Failures
+- Weak encryption algorithms (DES, RC4, MD5, SHA1)
+- Hardcoded encryption keys or IVs
+- Missing encryption for sensitive data in transit (HTTP instead of HTTPS)
+- Missing encryption for sensitive data at rest
+- Weak random number generation for security tokens
+- Improper certificate validation
+
+### 8. Insecure Deserialization
+- Unsafe deserialization of untrusted data (pickle, YAML, JSON with type info)
+- Object injection attacks
+- Remote code execution via deserialization
+
+### 9. Vulnerable and Outdated Components
+- Using dependencies with known vulnerabilities
+- Outdated framework versions
+- Missing security patches
+- Unnecessary dependencies increasing attack surface
+
+### 10. Server-Side Request Forgery (SSRF)
+- Unvalidated URLs in HTTP requests
+- Internal network enumeration via SSRF
+- Cloud metadata endpoint access
+- DNS rebinding attacks
+
+## Web Security Specific Checks
+
+### Session Management
+- Weak session ID generation (predictable, too short)
+- Session IDs in URLs (session fixation risk)
+- Missing session timeout/expiration
+- Session not invalidated after logout
+- Session cookies accessible via JavaScript (missing `HttpOnly`)
+
+### Cookie Security
+- Missing `Secure` flag on sensitive cookies
+- Missing `HttpOnly` flag (XSS can steal cookies)
+- Missing or weak `SameSite` attribute (`Lax` or `Strict`)
+- Cookies with excessive lifetime
+- Sensitive data stored in cookies
+
+### Content Security Policy (CSP)
+- Missing CSP header entirely
+- Weak CSP with `unsafe-inline` or `unsafe-eval`
+- CSP allowing `data:` or `blob:` URIs
+- CSP bypass via JSONP endpoints
+- Missing `frame-ancestors` directive (clickjacking)
+
+### Clickjacking Protection
+- Missing `X-Frame-Options` header
+- Incorrect `X-Frame-Options` value
+- Missing CSP `frame-ancestors` directive
+
+### CORS (Cross-Origin Resource Sharing)
+- Wildcard `Access-Control-Allow-Origin: *` with credentials
+- Reflecting arbitrary `Origin` without validation
+- Allowing `null` origin
+- Missing origin whitelist validation
+
+### Open Redirect
+- Unvalidated redirect URLs accepting arbitrary destinations
+- Missing host whitelist for redirects
+- Referer-based redirects
+
+### HTTP Security Headers
+Check for presence and correct configuration of:
+- `Content-Security-Policy`
+- `X-Frame-Options`
+- `X-Content-Type-Options: nosniff`
+- `Strict-Transport-Security`
+- `Referrer-Policy`
+- `Permissions-Policy`
+
+{% if has_frameworks %}
+## Detected Frameworks
+The following web frameworks were detected: {{ frameworks | join(', ') }}
+Pay special attention to framework-specific security features and common misconfigurations.
+{% endif %}
+
+{% if has_examples %}
+## Security Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+**Vulnerable Code:**
+```{{ language }}
+{{ example.vulnerable_code }}
+```
+
+**Issue:** {{ example.issue }}
+**Fix:** {{ example.fix }}
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: {{ language }}
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with web security context and OWASP category",
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-79' for XSS, 'CWE-89' for SQLi)",
+            "fix": {
+                "before_code": "Code snippet showing the vulnerable code from the file",
+                "after_code": "Code snippet showing the secure code with proper input validation, output encoding, or security controls",
+                "explanation": "Detailed explanation of why this fix prevents the web security vulnerability, referencing OWASP guidance",
+                "references": ["Optional array of URLs to OWASP resources, security advisories, or MDN docs"]
+            }
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on web security posture and OWASP compliance"
+    }
+}
