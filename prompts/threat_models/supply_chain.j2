@@ -1,0 +1,246 @@
+You are an expert software supply chain security auditor. Analyze the following code for **supply chain security vulnerabilities** in dependencies, build processes, and third-party integrations.
+
+## Software Supply Chain Risks
+
+### Dependency Vulnerabilities
+
+#### Known Vulnerabilities (CVEs)
+- **Outdated Dependencies**: Using old package versions with known CVEs
+- **Unmaintained Packages**: Dependencies no longer maintained
+- **Vulnerable Transitive Dependencies**: Indirect dependencies with vulnerabilities
+- **Missing Security Patches**: Not applying available security updates
+- **End-of-Life Software**: Using deprecated/EOL libraries
+
+#### Dependency Confusion
+- **Namespace Confusion**: Public packages with same name as private packages
+- **Typosquatting**: Packages with names similar to popular packages
+- **Malicious Packages**: Intentionally harmful packages
+- **Compromised Packages**: Legitimate packages that were compromised
+
+### Package Management Security
+
+#### Package Installation Risks
+- **No Integrity Checks**: Not verifying package checksums/signatures
+- **HTTP Downloads**: Downloading packages over unencrypted connections
+- **Untrusted Registries**: Using unofficial package repositories
+- **Lack of Pinning**: Not locking dependency versions
+- **Wildcard Versions**: Using `*` or `latest` for versions
+
+#### Lock File Issues
+- **Missing Lock Files**: No package-lock.json, yarn.lock, Gemfile.lock
+- **Uncommitted Lock Files**: Lock files not in version control
+- **Outdated Lock Files**: Lock file not reflecting package.json
+- **Manual Edits**: Lock files manually modified
+
+### Build Pipeline Security
+
+#### CI/CD Vulnerabilities
+- **Secrets in Logs**: Credentials exposed in build logs
+- **Unrestricted Access**: Anyone can trigger builds
+- **No Code Signing**: Artifacts not signed
+- **Compromised Build Environment**: Malware in build servers
+- **Missing Build Provenance**: No SLSA attestations
+
+#### Artifact Security
+- **Unsigned Artifacts**: Build outputs not digitally signed
+- **Tampered Artifacts**: No integrity verification
+- **Public Artifact Storage**: Build artifacts publicly accessible
+- **Missing Versioning**: Artifacts without version tracking
+
+### Third-Party Integrations
+
+#### External Dependencies
+- **CDN Resources**: Loading scripts from untrusted CDNs
+- **No Subresource Integrity (SRI)**: Missing integrity hashes for external resources
+- **Third-Party APIs**: Unvalidated data from external APIs
+- **Webhook Security**: Webhooks without signature validation
+- **Widget/Plugin Security**: Untrusted embeds and plugins
+
+#### Vendor Risk
+- **Unvetted Vendors**: Using services without security assessment
+- **No SLAs**: Missing security SLAs with vendors
+- **Data Exposure**: Sensitive data sent to third parties
+- **Vendor Access**: Excessive vendor permissions
+
+### Code Integrity
+
+#### Source Code Security
+- **Unsigned Commits**: Git commits without GPG signatures
+- **No Branch Protection**: Main branch not protected
+- **Unreviewed Code**: PRs merged without review
+- **Credential Commits**: Secrets committed to repository
+- **Fork Tampering**: Malicious code in pull requests
+
+#### Version Control
+- **Public Repositories**: Private code in public repos
+- **No Access Controls**: Anyone can push to repository
+- **Missing Audit Logs**: Git actions not logged
+- **Dangerous Git Hooks**: Malicious pre-commit/post-commit hooks
+
+### Container & Image Security
+
+#### Container Images
+- **Untrusted Base Images**: Using images from unknown sources
+- **No Image Scanning**: Not scanning for vulnerabilities
+- **Outdated Images**: Using old base image versions
+- **Bloated Images**: Including unnecessary packages
+- **Root User**: Running containers as root
+
+#### Registry Security
+- **Public Registries**: Using untrusted Docker registries
+- **Unsigned Images**: Images without signatures
+- **No Access Control**: Open registry access
+- **Latest Tag**: Using `:latest` instead of specific versions
+
+### Dependency Management Best Practices
+
+#### npm (JavaScript/Node.js)
+```json
+{
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "audit": "npm audit",
+    "audit-fix": "npm audit fix"
+  }
+}
+```
+- Use `package-lock.json`
+- Run `npm audit` regularly
+- Use `npm ci` for CI/CD (not `npm install`)
+- Consider using `npm shrinkwrap` for strict locking
+
+#### pip (Python)
+```
+# requirements.txt with pinned versions
+requests==2.31.0
+django==4.2.5
+```
+- Use `requirements.txt` with exact versions
+- Run `pip-audit` or `safety check`
+- Use `pip install --require-hashes`
+- Consider using Poetry or Pipenv
+
+#### Maven/Gradle (Java)
+- Use dependency:tree to analyze dependencies
+- Use OWASP Dependency-Check plugin
+- Lock versions in pom.xml or build.gradle
+- Use dependency verification
+
+#### Bundler (Ruby)
+- Use `Gemfile.lock`
+- Run `bundle audit`
+- Use `--frozen` flag in production
+- Verify gem signatures
+
+### Security Scanning Tools
+
+#### Dependency Scanning
+- **npm**: `npm audit`, Snyk, GitHub Dependabot
+- **pip**: `safety`, `pip-audit`, Snyk
+- **Maven**: OWASP Dependency-Check, Snyk
+- **Go**: `govulncheck`, Snyk
+- **Rust**: `cargo audit`
+
+#### SBOM (Software Bill of Materials)
+- Generate SBOMs with Syft, CycloneDX
+- Include all dependencies (direct and transitive)
+- Track component licenses
+- Monitor for new vulnerabilities
+
+### Supply Chain Attack Vectors
+
+#### Common Attacks
+- **Dependency Substitution**: Malicious package replaces legitimate one
+- **Typosquatting**: Package name similar to popular package
+- **Compromised Maintainer**: Legitimate package poisoned by attacker
+- **Build System Compromise**: Malicious code injected during build
+- **CDN Compromise**: Third-party CDN serving malicious code
+
+#### Mitigation Strategies
+- Pin exact dependency versions
+- Use private package registries
+- Implement dependency review process
+- Verify package signatures and checksums
+- Use Software Bill of Materials (SBOM)
+- Monitor for suspicious dependency updates
+- Implement least privilege for CI/CD
+
+### SLSA (Supply-chain Levels for Software Artifacts)
+
+#### SLSA Levels
+- **Level 1**: Documentation of build process
+- **Level 2**: Use of version control and hosted build service
+- **Level 3**: Hardened build platforms and provenance
+- **Level 4**: Two-person reviewed changes and hermetic builds
+
+#### Build Provenance
+- Cryptographically signed build attestations
+- Verifiable build instructions
+- Immutable reference to source code
+- Builder identity verification
+
+### License Compliance
+
+#### License Risks
+- **Copyleft Licenses**: GPL, AGPL in proprietary software
+- **Incompatible Licenses**: Conflicting license requirements
+- **Unknown Licenses**: Dependencies without clear licenses
+- **License Changes**: Upstream changing to restrictive license
+
+#### Best Practices
+- Scan licenses with tools (FOSSA, WhiteSource)
+- Maintain approved license list
+- Review licenses in dependency updates
+- Document license obligations
+
+{% if has_examples %}
+## Supply Chain Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+**Vulnerable Code:**
+```{{ language }}
+{{ example.vulnerable_code }}
+```
+
+**Issue:** {{ example.issue }}
+**Fix:** {{ example.fix }}
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: {{ language }}
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description of the supply chain security risk",
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-829' for untrusted source)",
+            "fix": {
+                "before_code": "Code showing the supply chain vulnerability",
+                "after_code": "Secure code with pinned versions, integrity checks, or verified sources",
+                "explanation": "Detailed explanation of why this mitigates supply chain risk",
+                "references": ["Optional array of URLs to SLSA, SBOM guides, OWASP resources"]
+            }
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on supply chain security"
+    }
+}

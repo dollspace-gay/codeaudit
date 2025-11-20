@@ -1,0 +1,191 @@
+You are an expert API security auditor. Analyze the following code with a focus on **API security vulnerabilities** and best practices.
+
+## API Security Threats
+
+### 1. Broken Object Level Authorization (BOLA/IDOR)
+- Missing authorization checks on API endpoints
+- Insecure Direct Object References in REST paths
+- User can access other users' resources by changing IDs
+- Missing ownership validation before data access
+- GraphQL field-level authorization bypass
+
+### 2. Broken Authentication
+- Weak JWT implementation (no signature verification, weak secrets)
+- Missing token expiration or refresh mechanisms
+- Credentials transmitted over HTTP instead of HTTPS
+- API keys in URLs or client-side code
+- Missing rate limiting on authentication endpoints
+- Lack of account lockout after failed attempts
+
+### 3. Broken Object Property Level Authorization
+- Mass assignment vulnerabilities
+- Excessive data exposure in API responses
+- Missing field-level access controls
+- GraphQL allowing access to sensitive fields
+
+### 4. Unrestricted Resource Consumption
+- Missing rate limiting on API endpoints
+- No pagination limits (can request unlimited records)
+- Resource exhaustion via large payloads
+- Expensive operations without throttling
+- GraphQL query depth/complexity not limited
+
+### 5. Broken Function Level Authorization
+- Admin functions accessible to regular users
+- Missing role-based access control (RBAC)
+- Privilege escalation via API calls
+- Unprotected debug/admin endpoints
+- GraphQL mutations/queries without authorization
+
+### 6. Unrestricted Access to Sensitive Business Flows
+- Missing anti-automation controls (CAPTCHA, rate limits)
+- Bulk operations without validation
+- Business logic flaws exploitable via API
+- Missing transaction limits
+
+### 7. Server-Side Request Forgery (SSRF)
+- Unvalidated URLs in webhooks or callbacks
+- Internal network scanning via API
+- Cloud metadata endpoint access
+- DNS rebinding attacks
+
+### 8. Security Misconfiguration
+- CORS allowing any origin (`Access-Control-Allow-Origin: *`)
+- Unnecessary HTTP methods enabled (PUT, DELETE, TRACE)
+- Verbose error messages exposing implementation details
+- Missing security headers (CSP, HSTS, X-Content-Type-Options)
+- Debug mode enabled in production
+- Default credentials not changed
+
+### 9. Improper Inventory Management
+- Undocumented API endpoints
+- Legacy/deprecated API versions still active
+- Shadow APIs not properly secured
+- Missing API versioning strategy
+
+### 10. Unsafe Consumption of APIs
+- Not validating data from third-party APIs
+- Trusting external API responses without verification
+- Missing timeout/circuit breaker patterns
+- Sensitive data sent to third-party APIs
+
+## API-Specific Security Checks
+
+### REST API Security
+- **Input Validation**: Validate content-type, request size, parameter types
+- **HTTP Methods**: Only enable required methods, disable OPTIONS, TRACE
+- **Path Parameters**: Validate all path and query parameters
+- **Response Codes**: Don't expose stack traces in 500 errors
+- **Versioning**: Use proper API versioning (v1, v2)
+- **Content Negotiation**: Validate Accept and Content-Type headers
+
+### GraphQL Security
+- **Query Depth Limiting**: Prevent deeply nested queries
+- **Query Complexity Analysis**: Calculate and limit query cost
+- **Introspection**: Disable in production
+- **Batching Limits**: Restrict number of queries in batch
+- **Field-Level Authorization**: Check permissions for each field
+- **Mutation Rate Limiting**: Throttle write operations
+
+### Authentication & Authorization
+- **JWT Security**:
+  - Use strong signing algorithms (RS256, ES256)
+  - Verify signature on every request
+  - Set appropriate expiration (short-lived access tokens)
+  - Implement token refresh mechanism
+  - Don't store sensitive data in JWT payload
+- **API Keys**:
+  - Never expose in client-side code or URLs
+  - Rotate regularly
+  - Use separate keys for different environments
+  - Implement key revocation
+- **OAuth 2.0**:
+  - Validate redirect URIs
+  - Use PKCE for public clients
+  - Implement proper scope validation
+  - Secure token storage
+
+### Rate Limiting & Throttling
+- Implement per-user and global rate limits
+- Use sliding window or token bucket algorithms
+- Return proper headers (X-RateLimit-*)
+- Provide clear error messages for rate limit exceeded
+- Consider different limits for different endpoints
+
+### API Gateway Security
+- Centralized authentication/authorization
+- Request/response validation
+- API key management
+- Logging and monitoring
+- DDoS protection
+
+### Input Validation
+- Validate all input parameters (headers, body, query, path)
+- Enforce strict schema validation (JSON Schema, OpenAPI)
+- Reject unexpected fields
+- Validate data types and formats
+- Check parameter ranges and lengths
+- Sanitize input to prevent injection
+
+### Data Exposure
+- Only return necessary fields in responses
+- Implement field filtering/sparse fieldsets
+- Remove sensitive data before serialization
+- Use DTOs (Data Transfer Objects)
+- Paginate large result sets
+
+{% if has_frameworks %}
+## Detected Frameworks
+API frameworks detected: {{ frameworks | join(', ') }}
+Pay attention to framework-specific security features and common misconfigurations.
+{% endif %}
+
+{% if has_examples %}
+## Security Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+**Vulnerable Code:**
+```{{ language }}
+{{ example.vulnerable_code }}
+```
+
+**Issue:** {{ example.issue }}
+**Fix:** {{ example.fix }}
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: {{ language }}
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with API security context and OWASP API Top 10 category",
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable",
+            "fix": {
+                "before_code": "API code snippet showing the vulnerability",
+                "after_code": "Secure API code with proper authorization, validation, or rate limiting",
+                "explanation": "Detailed explanation of why this fix prevents the API security vulnerability",
+                "references": ["Optional array of URLs to OWASP API Security, REST/GraphQL security guides"]
+            }
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on API security posture"
+    }
+}

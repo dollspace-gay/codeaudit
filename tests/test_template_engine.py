@@ -364,3 +364,255 @@ Examples count: {{ few_shot_examples|length }}
             few_shot_examples=[]
         )
         assert "BASE" in prompt_base
+
+
+class TestProductionTemplates:
+    """Test that all production templates load and render correctly."""
+
+    def test_all_language_templates_load(self):
+        """Test that all 14 language-specific templates can be loaded and rendered."""
+        engine = PromptEngine()
+        languages = ['python', 'javascript', 'typescript', 'java', 'cpp', 'csharp',
+                    'go', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'dart']
+
+        for language in languages:
+            prompt = engine.get_prompt(
+                language=language,
+                code_content="def test(): pass",
+                file_name=f"test.{language}",
+                frameworks=[],
+                threat_models=[],
+                few_shot_examples=[]
+            )
+            assert prompt is not None
+            assert len(prompt) > 100  # Should be a substantial prompt
+            assert 'JSON Schema' in prompt or 'json' in prompt.lower()
+
+    def test_all_threat_model_templates_load(self):
+        """Test that all 8 threat model templates can be loaded and rendered."""
+        engine = PromptEngine()
+        threat_models_list = [
+            'web_security', 'api_security', 'mobile_security', 'cryptography',
+            'auth', 'database', 'cloud', 'supply_chain'
+        ]
+
+        for threat_model in threat_models_list:
+            prompt = engine.get_prompt(
+                language='unknown',  # Use unknown language to force threat model selection
+                code_content="def test(): pass",
+                file_name="test.py",
+                frameworks=[],
+                threat_models=[threat_model],
+                few_shot_examples=[]
+            )
+            assert prompt is not None
+            assert len(prompt) > 200  # Threat models should be comprehensive
+
+    def test_threat_model_web_security_content(self):
+        """Test that web_security template contains expected security guidance."""
+        engine = PromptEngine()
+        prompt = engine.get_prompt(
+            language='unknown',
+            code_content="code",
+            file_name="test.py",
+            frameworks=[],
+            threat_models=['web_security'],
+            few_shot_examples=[]
+        )
+
+        # Verify OWASP Top 10 content
+        assert 'OWASP' in prompt or 'owasp' in prompt.lower()
+        assert 'XSS' in prompt or 'Cross-Site Scripting' in prompt
+        assert 'CSRF' in prompt or 'Cross-Site Request Forgery' in prompt
+        assert 'SQL' in prompt or 'injection' in prompt.lower()
+
+    def test_threat_model_api_security_content(self):
+        """Test that api_security template contains expected API security guidance."""
+        engine = PromptEngine()
+        prompt = engine.get_prompt(
+            language='unknown',
+            code_content="code",
+            file_name="test.py",
+            frameworks=[],
+            threat_models=['api_security'],
+            few_shot_examples=[]
+        )
+
+        # Verify API security content
+        assert 'API' in prompt or 'api' in prompt.lower()
+        assert 'BOLA' in prompt or 'authorization' in prompt.lower()
+        assert 'rate limit' in prompt.lower() or 'Rate Limiting' in prompt
+
+    def test_threat_model_cryptography_content(self):
+        """Test that cryptography template contains expected crypto guidance."""
+        engine = PromptEngine()
+        prompt = engine.get_prompt(
+            language='unknown',
+            code_content="code",
+            file_name="test.py",
+            frameworks=[],
+            threat_models=['cryptography'],
+            few_shot_examples=[]
+        )
+
+        # Verify cryptography content
+        assert 'AES' in prompt or 'encryption' in prompt.lower()
+        assert 'MD5' in prompt or 'SHA' in prompt
+        assert 'key' in prompt.lower()
+
+    def test_framework_django_template_loads(self):
+        """Test that Django framework template can be loaded."""
+        engine = PromptEngine()
+        prompt = engine.get_prompt(
+            language='python',
+            code_content="from django.db import models",
+            file_name="models.py",
+            frameworks=['django'],
+            threat_models=[],
+            few_shot_examples=[]
+        )
+
+        assert prompt is not None
+        assert 'Django' in prompt or 'django' in prompt.lower()
+        assert 'CSRF' in prompt or 'csrf' in prompt.lower()
+
+    def test_fix_suggestions_in_templates(self):
+        """Test that templates include fix suggestion schema."""
+        engine = PromptEngine()
+
+        # Test base template
+        prompt = engine.get_prompt(
+            language='unknown',
+            code_content="code",
+            file_name="test.txt",
+            frameworks=[],
+            threat_models=[],
+            few_shot_examples=[]
+        )
+        assert 'fix' in prompt.lower()
+        assert 'before_code' in prompt or 'after_code' in prompt
+
+        # Test language-specific template
+        prompt_python = engine.get_prompt(
+            language='python',
+            code_content="def test(): pass",
+            file_name="test.py",
+            frameworks=[],
+            threat_models=[],
+            few_shot_examples=[]
+        )
+        assert 'fix' in prompt_python.lower()
+        assert 'before_code' in prompt_python or 'after_code' in prompt_python
+
+    def test_few_shot_examples_injection(self):
+        """Test that few-shot examples are properly injected into templates."""
+        engine = PromptEngine()
+
+        examples = [
+            {
+                'title': 'SQL Injection Example',
+                'vulnerable_code': 'query = f"SELECT * FROM users WHERE id = {user_id}"',
+                'issue': 'SQL injection vulnerability',
+                'fix': 'Use parameterized queries'
+            }
+        ]
+
+        prompt = engine.get_prompt(
+            language='python',
+            code_content="code",
+            file_name="test.py",
+            frameworks=[],
+            threat_models=[],
+            few_shot_examples=examples
+        )
+
+        assert 'SQL Injection Example' in prompt
+        assert 'parameterized queries' in prompt
+
+    def test_template_priority_with_production_templates(self):
+        """Test template selection priority with actual production templates."""
+        engine = PromptEngine()
+
+        # Framework should take priority over language
+        prompt_django = engine.get_prompt(
+            language='python',
+            code_content="code",
+            file_name="test.py",
+            frameworks=['django'],
+            threat_models=[],
+            few_shot_examples=[]
+        )
+        # Should use Django template, not Python template
+        assert 'django' in prompt_django.lower()
+
+        # Language should take priority over threat model
+        prompt_python = engine.get_prompt(
+            language='python',
+            code_content="code",
+            file_name="test.py",
+            frameworks=[],
+            threat_models=['web_security'],
+            few_shot_examples=[]
+        )
+        # Should use Python template
+        assert 'Python' in prompt_python
+
+        # Threat model should be used when no language/framework match
+        prompt_threat = engine.get_prompt(
+            language='unknown_lang',
+            code_content="code",
+            file_name="test.xyz",
+            frameworks=[],
+            threat_models=['api_security'],
+            few_shot_examples=[]
+        )
+        # Should use API security template
+        assert 'api' in prompt_threat.lower() or 'API' in prompt_threat
+
+    def test_template_rendering_with_all_parameters(self):
+        """Test template rendering with all possible parameters filled."""
+        engine = PromptEngine()
+
+        examples = [{'title': 'Test', 'vulnerable_code': 'code', 'issue': 'issue', 'fix': 'fix'}]
+
+        prompt = engine.get_prompt(
+            language='python',
+            code_content='def vulnerable(): pass',
+            file_name='vuln.py',
+            frameworks=['django', 'flask'],
+            threat_models=['web_security', 'api_security'],
+            few_shot_examples=examples
+        )
+
+        # Verify all parameters are used in rendering
+        assert 'vuln.py' in prompt
+        assert 'vulnerable' in prompt or 'def vulnerable()' in prompt
+        assert 'Test' in prompt  # From few-shot example
+
+    def test_json_schema_in_all_templates(self):
+        """Test that all templates include JSON schema for structured output."""
+        engine = PromptEngine()
+
+        # Test various template types
+        test_cases = [
+            {'language': 'python', 'frameworks': [], 'threat_models': []},
+            {'language': 'javascript', 'frameworks': [], 'threat_models': []},
+            {'language': 'unknown', 'frameworks': [], 'threat_models': ['web_security']},
+            {'language': 'python', 'frameworks': ['django'], 'threat_models': []},
+        ]
+
+        for case in test_cases:
+            prompt = engine.get_prompt(
+                language=case['language'],
+                code_content='code',
+                file_name='test.py',
+                frameworks=case['frameworks'],
+                threat_models=case['threat_models'],
+                few_shot_examples=[]
+            )
+
+            # All templates should have JSON schema
+            assert 'issues' in prompt.lower()
+            assert 'severity' in prompt.lower()
+            assert 'summary' in prompt.lower()
+

@@ -1,0 +1,218 @@
+You are an expert mobile security auditor. Analyze the following code with a focus on **mobile application security** for iOS and Android platforms.
+
+## OWASP Mobile Top 10
+
+### M1: Improper Platform Usage
+- Misuse of platform features or security controls
+- Incorrect use of keychain/keystore
+- Improper use of biometric authentication
+- Abuse of Android permissions
+- TouchID/FaceID bypass vulnerabilities
+
+### M2: Insecure Data Storage
+- Sensitive data in SharedPreferences/UserDefaults without encryption
+- Unencrypted databases (SQLite, Realm, Core Data)
+- Sensitive data in application logs
+- Caching sensitive data in HTTP responses
+- Sensitive data in temp files or clipboard
+- Backups containing sensitive data
+- Keyboard cache leaking passwords
+
+### M3: Insecure Communication
+- HTTP instead of HTTPS for sensitive data
+- Certificate pinning not implemented
+- Accepting self-signed certificates
+- Weak TLS/SSL configurations
+- Cleartext traffic allowed in network config
+
+### M4: Insecure Authentication
+- Client-side authentication bypass
+- Weak password policies
+- Biometric authentication without server verification
+- Session tokens stored insecurely
+- Missing re-authentication for sensitive operations
+- Hardcoded credentials
+
+### M5: Insufficient Cryptography
+- Using deprecated/weak algorithms (MD5, SHA1, DES, RC4)
+- Hardcoded encryption keys in source code
+- Using ECB mode instead of CBC/GCM
+- Weak key generation
+- Storing encryption keys with encrypted data
+- Using custom/proprietary crypto (don't roll your own!)
+
+### M6: Insecure Authorization
+- Client-side authorization decisions
+- Missing server-side authorization checks
+- Privilege escalation via API manipulation
+- IDOR (Insecure Direct Object References)
+- Role/permission bypass
+
+### M7: Client Code Quality
+- Buffer overflows in native code
+- Format string vulnerabilities
+- Memory corruption issues
+- Integer overflows
+- Use-after-free vulnerabilities
+
+### M8: Code Tampering
+- Missing anti-tampering protections
+- No integrity checks on app binary
+- Missing root/jailbreak detection
+- Debugger detection not implemented
+- Easy to decompile/reverse engineer
+
+### M9: Reverse Engineering
+- Lack of code obfuscation
+- Debug symbols in production builds
+- Hardcoded secrets/API keys visible in decompiled code
+- Business logic easily extracted
+- Missing anti-debugging protections
+
+### M10: Extraneous Functionality
+- Debug code in production builds
+- Test backdoors enabled
+- Administrative consoles accessible
+- Unnecessary permissions requested
+
+## Platform-Specific Security
+
+### Android Security
+- **Manifest Security**:
+  - `android:allowBackup="false"` for sensitive apps
+  - `android:debuggable="false"` in production
+  - Proper permission declarations
+  - Intent filter validation
+- **Storage Security**:
+  - Use EncryptedSharedPreferences (Jetpack Security)
+  - Encrypted Room database
+  - Internal storage over external storage
+  - Secure file permissions (MODE_PRIVATE)
+- **Network Security Config**:
+  - Disable cleartext traffic
+  - Implement certificate pinning
+  - Trust only specific CAs
+- **WebView Security**:
+  - Disable JavaScript if not needed
+  - `setAllowFileAccess(false)`
+  - `setAllowContentAccess(false)`
+  - Validate JavaScript bridges
+- **Deep Links**:
+  - Validate all incoming URLs
+  - Verify app link signatures
+  - Prevent intent injection
+- **Root Detection**:
+  - Check for su binary
+  - Verify SafetyNet attestation
+  - Detect Magisk/Xposed
+
+### iOS Security
+- **Keychain**:
+  - Use Keychain for credentials
+  - Set proper accessibility levels
+  - Enable Keychain sharing carefully
+- **Data Protection**:
+  - Enable file protection attributes
+  - Use Complete/CompleteUnlessOpen protection
+- **App Transport Security (ATS)**:
+  - Don't disable ATS
+  - Use NSAllowsArbitraryLoads sparingly
+  - Implement certificate pinning
+- **Code Signing**:
+  - Verify app signature
+  - Check provisioning profile
+- **Jailbreak Detection**:
+  - Check for Cydia/other jailbreak apps
+  - Verify sandbox integrity
+  - Check file system permissions
+- **Privacy**:
+  - Request minimum necessary permissions
+  - Provide clear privacy policy
+  - Handle clipboard data carefully
+
+### Cross-Platform Considerations
+- **React Native**: Check AsyncStorage encryption, bridge vulnerabilities
+- **Flutter**: Verify secure storage plugin usage, platform channel security
+- **Xamarin**: Check SecureStorage, SSL pinning implementation
+- **Cordova/Ionic**: WebView security, plugin vulnerabilities
+
+## Mobile-Specific Vulnerabilities
+
+### Insecure IPC (Inter-Process Communication)
+- Unprotected broadcast receivers
+- Exported components without permissions
+- Intent spoofing vulnerabilities
+- URL scheme hijacking
+
+### Binary Protection
+- Missing ProGuard/R8 obfuscation (Android)
+- Debug symbols in release builds
+- String literals containing secrets
+- Easy to extract resources
+
+### Session Management
+- Long session timeouts
+- Session tokens in URLs
+- No session invalidation on logout
+- Token storage in insecure locations
+
+### Third-Party SDKs
+- Using outdated SDK versions
+- SDKs with known vulnerabilities
+- Excessive SDK permissions
+- SDKs with privacy concerns
+
+{% if has_frameworks %}
+## Detected Mobile Frameworks
+Mobile frameworks detected: {{ frameworks | join(', ') }}
+{% endif %}
+
+{% if has_examples %}
+## Security Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+**Vulnerable Code:**
+```{{ language }}
+{{ example.vulnerable_code }}
+```
+
+**Issue:** {{ example.issue }}
+**Fix:** {{ example.fix }}
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: {{ language }}
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with mobile security context and OWASP Mobile category",
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable",
+            "fix": {
+                "before_code": "Mobile code showing the vulnerability",
+                "after_code": "Secure mobile code with proper encryption, validation, or platform APIs",
+                "explanation": "Detailed explanation of why this fix prevents the mobile security vulnerability",
+                "references": ["Optional array of URLs to OWASP Mobile, platform security guides"]
+            }
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on mobile security posture"
+    }
+}

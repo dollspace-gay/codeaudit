@@ -1,0 +1,287 @@
+You are an expert Django security auditor. Analyze the following Django code for **framework-specific vulnerabilities and security best practices**.
+
+## Django-Specific Security Vulnerabilities
+
+### Template Injection (SSTI)
+- **Using `mark_safe()` on user input**: Bypasses auto-escaping
+- **Template tag abuse**: Custom template tags processing untrusted data
+- **`{# autoescape off #}`**: Disabling escaping in templates
+- **Raw SQL in templates**: Using template tags that execute SQL
+
+### ORM Injection
+- **`.raw()` with user input**: String interpolation in raw SQL
+- **`.extra()` with unsanitized input**: SQL injection via extra() clause
+- **`RawSQL()` misuse**: Unsafe use of RawSQL expressions
+- **Dynamic table/column names**: User-controlled identifiers
+
+### Settings Misconfiguration
+- **`DEBUG = True` in production**: Exposing error details
+- **`SECRET_KEY` exposed**: Secret key in version control or public
+- **`ALLOWED_HOSTS = ['*']`**: Allowing all hosts
+- **Missing security middleware**: CSRF, Security, Clickjacking middleware disabled
+- **Insecure `SESSION_COOKIE_*` settings**: Missing Secure, HttpOnly, SameSite
+
+### Authentication & Session Security
+- **Weak password hashers**: Using MD5PasswordHasher or unsalted hashers
+- **Custom auth backend vulnerabilities**: Insecure authentication logic
+- **Session fixation**: Not rotating session on login
+- **Predictable session keys**: Weak `SESSION_ENGINE` configuration
+- **Remember me vulnerabilities**: Persistent sessions without re-auth
+
+### Authorization Issues
+- **Missing `@login_required` decorators**: Unprotected views
+- **Improper permission checks**: Using `user.is_authenticated` incorrectly
+- **Object-level permission bypass**: Missing ownership checks
+- **Admin interface exposed**: `/admin/` accessible in production without IP restriction
+
+### CSRF Protection
+- **`@csrf_exempt` decorator abuse**: Disabling CSRF on state-changing views
+- **Missing CSRF token**: Forms without `{{ '{%' }} csrf_token {{ '%}' }}`
+- **AJAX without CSRF**: Not sending CSRF token in AJAX requests
+- **GET requests changing state**: Using GET for data modification
+
+### SQL Injection
+- **String concatenation in queries**: Using `+` or `%` in SQL
+- **F() expression misuse**: Unsafe use of F objects
+- **`.annotate()` and `.aggregate()` injection**: User input in aggregation
+- **`queryset.query` manipulation**: Directly modifying query objects
+
+### File Upload Vulnerabilities
+- **No file type validation**: Accepting any file type
+- **Missing file size limits**: Large file DoS
+- **Executable uploads**: Allowing .php, .py, .sh uploads
+- **Path traversal in uploads**: User-controlled file paths
+- **`FileField` without validation**: Missing custom validators
+
+### Mass Assignment
+- **Using `request.POST` directly**: `Model.objects.create(**request.POST)`
+- **Missing field restrictions**: Not using `fields` or `exclude` in ModelForm
+- **Accepting unexpected fields**: No whitelist of allowed fields
+
+### Clickjacking
+- **Missing `X-Frame-Options`**: XFrameOptionsMiddleware disabled
+- **Permissive frame options**: `SAMEORIGIN` not set
+
+### Admin Security
+- **Default admin URL**: Using `/admin/` in production
+- **Admin accessible to all**: No IP restrictions or additional auth
+- **Weak admin passwords**: Simple admin credentials
+- **Verbose error pages**: Admin exposing stack traces
+
+## Django Security Settings
+
+### Required Security Settings
+```python
+# settings.py
+
+# Core Security
+DEBUG = False  # CRITICAL: Never True in production
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')  # From environment
+ALLOWED_HOSTS = ['yourdomain.com', 'www.yourdomain.com']
+
+# HTTPS/SSL
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+# Cookie Security
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Security Headers
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Password Security
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+]
+
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 12}},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+# Required Middleware (in order)
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+```
+
+### Database Security
+```python
+# Use parameterized queries (Django ORM default)
+User.objects.filter(username=username)  # Good
+User.objects.raw("SELECT * FROM users WHERE username = %s", [username])  # Good
+
+# AVOID
+User.objects.raw(f"SELECT * FROM users WHERE username = '{username}'")  # BAD
+```
+
+### Template Security
+```django
+{% raw %}{# Auto-escaped by default - GOOD #}
+{{ user_input }}
+
+{# DANGEROUS - Only use for trusted content #}
+{{ user_input|safe }}
+{{ user_input|mark_safe }}
+
+{# Always use csrf_token in forms #}
+<form method="post">
+  {% csrf_token %}
+  ...
+</form>{% endraw %}
+```
+
+### View Security
+```python
+from django.contrib.auth.decorators import login_required, permission_required
+from django.views.decorators.http import require_http_methods
+
+@login_required
+@require_http_methods(["POST"])  # Only allow POST
+def sensitive_action(request):
+    # Check object-level permissions
+    obj = get_object_or_404(Model, pk=pk)
+    if obj.owner != request.user:
+        raise PermissionDenied
+    # Process...
+```
+
+## Common Django Security Mistakes
+
+### 1. Template Injection
+```python
+# VULNERABLE
+from django.utils.safestring import mark_safe
+def my_view(request):
+    user_input = request.GET.get('data')
+    return render(request, 'template.html', {'data': mark_safe(user_input)})
+
+# SECURE
+def my_view(request):
+    user_input = request.GET.get('data')
+    return render(request, 'template.html', {'data': user_input})  # Auto-escaped
+```
+
+### 2. SQL Injection in raw()
+```python
+# VULNERABLE
+User.objects.raw(f"SELECT * FROM users WHERE name = '{name}'")
+
+# SECURE
+User.objects.raw("SELECT * FROM users WHERE name = %s", [name])
+# Or better, use ORM
+User.objects.filter(name=name)
+```
+
+### 3. Mass Assignment
+```python
+# VULNERABLE
+user = User.objects.create(**request.POST)
+
+# SECURE
+form = UserForm(request.POST)
+if form.is_valid():
+    user = form.save()
+```
+
+### 4. Missing CSRF Protection
+```python
+# VULNERABLE
+@csrf_exempt  # DON'T DO THIS
+def my_view(request):
+    pass
+
+# SECURE
+def my_view(request):  # CSRF middleware validates automatically
+    pass
+```
+
+### 5. Insecure File Uploads
+```python
+# VULNERABLE
+def upload(request):
+    file = request.FILES['file']
+    file.save(f'/uploads/{file.name}')  # Path traversal risk
+
+# SECURE
+from django.core.files.storage import default_storage
+
+def upload(request):
+    file = request.FILES['file']
+    # Validate file type and size
+    if file.size > 5*1024*1024:  # 5MB
+        raise ValidationError("File too large")
+    if not file.name.endswith(('.jpg', '.png', '.pdf')):
+        raise ValidationError("Invalid file type")
+    # Use storage backend (sanitizes filename)
+    filename = default_storage.save(file.name, file)
+```
+
+{% if has_examples %}
+## Django Security Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+**Vulnerable Code:**
+```python
+{{ example.vulnerable_code }}
+```
+
+**Issue:** {{ example.issue }}
+**Fix:** {{ example.fix }}
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: Python (Django)
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with Django-specific context",
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable",
+            "fix": {
+                "before_code": "Django code showing the vulnerability",
+                "after_code": "Secure Django code following framework best practices",
+                "explanation": "Detailed explanation referencing Django security features",
+                "references": ["Optional array of URLs to Django docs, security guides, OWASP"]
+            }
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on Django security and best practices"
+    }
+}

@@ -1,0 +1,238 @@
+You are an expert authentication and authorization security auditor. Analyze the following code for **authentication and authorization vulnerabilities**.
+
+## Authentication Vulnerabilities
+
+### Weak Password Policies
+- No minimum password length requirements
+- No complexity requirements (uppercase, lowercase, numbers, symbols)
+- Common passwords not blocked
+- No password history to prevent reuse
+- Passwords never expire
+
+### Credential Storage
+- **Plaintext Passwords**: Storing passwords without hashing
+- **Weak Hashing**: Using MD5, SHA1, or plain SHA-256 for passwords
+- **Missing Salt**: Hashing without unique per-user salts
+- **Predictable Salts**: Using username or email as salt
+- **Hardcoded Credentials**: Passwords/API keys in source code or config files
+- **Not Using bcrypt/Argon2**: Failing to use proper password hashing
+
+### Session Management
+- **Predictable Session IDs**: Sequential or guessable session tokens
+- **Short Session IDs**: Less than 128 bits of entropy
+- **Session Fixation**: Not regenerating session ID after login
+- **No Session Expiration**: Sessions never timeout
+- **Session in URL**: Exposing session tokens in GET parameters
+- **No Logout**: Missing or ineffective logout functionality
+- **Session not Invalidated**: Sessions persist after logout
+
+### Multi-Factor Authentication (MFA)
+- No MFA option available
+- MFA can be bypassed
+- Weak second factors (SMS OTP easily intercepted)
+- Backup codes stored insecurely
+- MFA not enforced for privileged accounts
+
+### Account Lockout & Brute Force
+- No account lockout after failed attempts
+- No rate limiting on login endpoints
+- Missing CAPTCHA on login forms
+- Credential stuffing vulnerabilities
+- Username enumeration possible
+
+### Password Reset
+- Predictable reset tokens
+- Reset tokens never expire
+- Reset tokens reusable
+- No verification before password reset
+- Reset link sent over insecure channel
+- Old password not required
+
+### OAuth/SSO Vulnerabilities
+- **OAuth Misconfigurations**:
+  - Open redirect in redirect_uri
+  - State parameter not validated (CSRF)
+  - Missing PKCE for public clients
+  - Scope validation issues
+- **SAML Vulnerabilities**:
+  - XML signature wrapping attacks
+  - Missing signature validation
+  - Replay attacks not prevented
+  - XXE in SAML parsing
+- **JWT Issues**:
+  - Algorithm confusion (alg=none)
+  - Weak signing keys
+  - Missing signature verification
+  - Sensitive data in JWT payload
+  - No token expiration
+
+## Authorization Vulnerabilities
+
+### Broken Access Control
+- **Horizontal Privilege Escalation**: User can access other users' data
+- **Vertical Privilege Escalation**: User can perform admin actions
+- **Missing Authorization Checks**: Endpoints not checking permissions
+- **Insecure Direct Object References (IDOR)**: Direct access to resources by ID
+- **Path Traversal**: Accessing files outside allowed directory
+
+### Role-Based Access Control (RBAC) Issues
+- Default roles too permissive
+- Role hierarchy not enforced
+- Users can assign themselves roles
+- Missing role validation on sensitive operations
+- Roles stored client-side
+
+### Attribute-Based Access Control (ABAC) Issues
+- Missing attribute validation
+- Client-controlled attributes trusted
+- Time-based restrictions not enforced
+- Location-based restrictions bypassable
+
+### Function-Level Authorization
+- Admin functions accessible without authorization
+- Debug endpoints exposed in production
+- API endpoints missing authorization
+- GraphQL mutations unprotected
+
+### Resource-Level Authorization
+- Missing ownership checks
+- Shared resources without ACLs
+- Tenant isolation failures
+- Cross-organization data access
+
+## Implementation-Specific Checks
+
+### JWT (JSON Web Tokens)
+**Security Checks:**
+- Verify signature on every request
+- Use strong signing algorithm (RS256, ES256, not HS256 with weak secret)
+- Set appropriate expiration (short-lived access tokens)
+- Don't store sensitive data in payload
+- Implement token refresh mechanism
+- Validate issuer and audience claims
+- Use HTTPS only for token transmission
+
+### API Keys
+**Security Checks:**
+- Don't expose in client-side code
+- Don't include in URLs
+- Rotate regularly
+- Hash before storing
+- Use separate keys per environment
+- Implement key revocation
+- Rate limit per key
+
+### Session Cookies
+**Security Checks:**
+- Set `HttpOnly` flag
+- Set `Secure` flag (HTTPS only)
+- Set `SameSite=Strict` or `Lax`
+- Use random session IDs (128+ bits)
+- Regenerate after login
+- Set appropriate expiration
+- Invalidate on logout
+
+### Password Reset Flow
+1. Validate email/username exists (without revealing)
+2. Generate cryptographically random token
+3. Set short expiration (15-30 minutes)
+4. Send over secure channel (HTTPS)
+5. Invalidate token after use
+6. Require email confirmation
+7. Log password reset events
+
+### MFA Implementation
+**Best Practices:**
+- Support TOTP (Time-based OTP)
+- Provide backup codes
+- Allow recovery flow
+- Enforce for admin accounts
+- Don't rely solely on SMS (SIM swapping risk)
+- Consider WebAuthn/FIDO2
+
+### Permission Models
+**Recommended Patterns:**
+- Deny by default, allow explicitly
+- Principle of least privilege
+- Separate authentication from authorization
+- Check permissions server-side
+- Don't trust client-side role checks
+- Audit permission changes
+
+## Common Vulnerabilities
+
+### Authentication Bypass
+- Logic flaws allowing login without credentials
+- SQL injection in login queries
+- NoSQL injection in authentication
+- LDAP injection in directory authentication
+- Fallback authentication paths
+
+### Authorization Bypass
+- Missing function-level checks
+- Parameter tampering (user_id, role)
+- Mass assignment vulnerabilities
+- HTTP method override bypass
+- Forced browsing to restricted URLs
+
+### Token Vulnerabilities
+- Token not verified
+- Expired tokens still valid
+- Token replay attacks
+- Insufficient token entropy
+- Token leakage in logs/URLs
+
+{% if has_frameworks %}
+## Detected Frameworks
+Auth frameworks detected: {{ frameworks | join(', ') }}
+{% endif %}
+
+{% if has_examples %}
+## Security Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+**Vulnerable Code:**
+```{{ language }}
+{{ example.vulnerable_code }}
+```
+
+**Issue:** {{ example.issue }}
+**Fix:** {{ example.fix }}
+
+{% endfor %}
+{% endif %}
+
+The output MUST be a single, valid JSON object. No markdown formatting.
+
+File: {{ file_name }}
+Language: {{ language }}
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description of the authentication/authorization vulnerability",
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable (e.g., 'CWE-287' for improper auth)",
+            "fix": {
+                "before_code": "Code showing the auth vulnerability",
+                "after_code": "Secure code with proper authentication and authorization",
+                "explanation": "Detailed explanation of why this fix secures authentication/authorization",
+                "references": ["Optional array of URLs to OWASP auth guides, NIST guidelines"]
+            }
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation focusing on auth security"
+    }
+}

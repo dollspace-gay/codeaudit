@@ -726,29 +726,522 @@ Google AI API calls are **not free**. Be mindful of:
 
 ## Architecture
 
-### Prompt System
+### Prompt Template System
 
-CodeAudit uses an intelligent prompt selection system:
+CodeAudit uses a sophisticated template-based prompt system that intelligently selects the most appropriate security analysis prompts based on the code being analyzed.
 
-1. **Framework-specific** prompts (e.g., `django.j2`)
-2. **Language-specific** prompts (e.g., `python.j2`)
-3. **Threat model** prompts (web, API, mobile, crypto)
-4. **Base prompt** fallback
+#### Template Directory Structure
+
+```
+prompts/
+├── base_prompt.j2              # Default fallback template
+├── languages/                  # Language-specific templates
+│   ├── python.j2
+│   ├── javascript.j2
+│   ├── typescript.j2
+│   ├── java.j2
+│   ├── cpp.j2
+│   ├── csharp.j2
+│   ├── go.j2
+│   ├── rust.j2
+│   ├── php.j2
+│   ├── ruby.j2
+│   ├── swift.j2
+│   ├── kotlin.j2
+│   ├── scala.j2
+│   └── dart.j2
+├── frameworks/                 # Framework-specific templates
+│   ├── django.j2              # Django-specific security checks
+│   ├── flask.j2               # Flask security patterns
+│   ├── fastapi.j2             # FastAPI vulnerabilities
+│   ├── react.j2               # React security issues
+│   ├── express.j2             # Express.js security
+│   └── spring.j2              # Spring Boot security
+└── threat_models/             # Threat model-specific templates
+    ├── web_security.j2        # OWASP Top 10 web vulnerabilities
+    ├── api_security.j2        # API-specific threats (BOLA, etc.)
+    ├── mobile_security.j2     # Mobile app security
+    ├── cryptography.j2        # Crypto vulnerabilities
+    ├── auth.j2                # Authentication/authorization
+    ├── database.j2            # SQL/NoSQL injection
+    ├── cloud.j2               # Cloud security (AWS/Azure/GCP)
+    └── supply_chain.j2        # Dependency vulnerabilities
+```
+
+#### Template Selection Priority
+
+CodeAudit selects the most specific template available using this priority order:
+
+1. **Framework-specific template** (highest priority)
+   - Used when a framework is detected (e.g., Django, React)
+   - Provides framework-specific security checks
+   - Example: `frameworks/django.j2` for Django code
+
+2. **Language-specific template**
+   - Used based on file extension
+   - Provides language-specific vulnerability patterns
+   - Example: `languages/python.j2` for `.py` files
+
+3. **Threat model template**
+   - Used when specific threat models are requested
+   - Provides focused security analysis
+   - Example: `threat_models/api_security.j2` for API code
+
+4. **Base template** (fallback)
+   - Used when no specific template matches
+   - Provides general security analysis
+   - Example: `base_prompt.j2`
+
+**Selection Examples:**
+
+```python
+# Django application (auth.py)
+# Selects: frameworks/django.j2
+# Includes: Django ORM injection, template injection, CSRF checks
+
+# Plain Python file (utils.py)
+# Selects: languages/python.j2
+# Includes: Python-specific vulnerabilities, stdlib issues
+
+# API endpoint (api.js) with Express detected
+# Selects: frameworks/express.j2
+# Includes: Express middleware, route security, input validation
+
+# Generic TypeScript file (helpers.ts)
+# Selects: languages/typescript.j2
+# Includes: TypeScript type safety, async security
+```
 
 ### Framework Detection
 
-Automatic framework detection using pattern matching:
-- Import statements
+CodeAudit automatically detects frameworks using pattern matching:
+
+**Detection Methods:**
+- Import/require statements
 - Package declarations
-- Framework-specific code patterns
+- Framework-specific decorators
+- Configuration files
+- Code patterns
+
+**Detected Frameworks:**
+
+| Language | Frameworks |
+|----------|-----------|
+| **Python** | Django, Flask, FastAPI, Tornado, Pyramid, SQLAlchemy, Celery |
+| **JavaScript/TypeScript** | Express, React, Vue, Angular, Next.js, Nest.js |
+| **Java** | Spring, Hibernate, Struts, JSF |
+| **Go** | Gin, Echo, Fiber |
+| **Ruby** | Rails, Sinatra |
+| **PHP** | Laravel, Symfony, CodeIgniter |
+
+**Framework-to-Threat-Model Mapping:**
+
+When a framework is detected, relevant threat models are automatically applied:
+
+```python
+# Django detected → Applies threat models:
+# - web_security (OWASP Top 10)
+# - api_security (if API endpoints found)
+# - database (ORM security)
+
+# React detected → Applies threat models:
+# - web_security (XSS, CSRF)
+# - api_security (if fetch/axios found)
+```
 
 ### Few-Shot Examples
 
-Provides curated vulnerability examples to guide AI analysis:
+CodeAudit provides curated vulnerability examples to guide AI analysis:
+
+**Example Categories:**
 - SQL Injection patterns
 - XSS vulnerabilities
 - Authentication bypasses
 - Command injection risks
+- Insecure deserialization
+- Path traversal attacks
+
+**Language-Specific Examples:**
+
+Each language has tailored examples:
+- Python: `eval()` abuse, pickle injection, SQL injection
+- JavaScript: Prototype pollution, XSS, command injection
+- Java: Deserialization, XXE, SQL injection
+
+### Creating Custom Templates
+
+You can create custom prompt templates for your specific needs.
+
+#### Template Syntax
+
+CodeAudit templates use **Jinja2** syntax with the following variables available:
+
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| `file_name` | str | Name of the file being analyzed | `auth.py` |
+| `language` | str | Programming language | `python` |
+| `code_content` | str | Full source code of the file | `def login(user):...` |
+| `frameworks` | list | Detected frameworks | `['django', 'celery']` |
+| `threat_models` | list | Active threat models | `['web_security', 'auth']` |
+| `few_shot_examples` | list | Vulnerability examples | `[{title, code, fix}]` |
+| `has_frameworks` | bool | Whether frameworks detected | `True` |
+| `has_examples` | bool | Whether examples provided | `True` |
+
+#### Creating a Language-Specific Template
+
+Create `prompts/languages/your_language.j2`:
+
+```jinja2
+You are an expert {{ language }} security auditor. Analyze the following code for security vulnerabilities.
+
+## {{ language|title }} Security Best Practices
+
+### Common {{ language }} Vulnerabilities
+- Describe language-specific security issues
+- Include code examples
+- Reference language documentation
+
+{% if has_frameworks %}
+## Detected Frameworks
+Frameworks detected: {{ frameworks | join(', ') }}
+{% endif %}
+
+{% if has_examples %}
+## Security Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+**Vulnerable Code:**
+```{{ language }}
+{{ example.vulnerable_code }}
+```
+
+**Issue:** {{ example.issue }}
+**Fix:** {{ example.fix }}
+
+{% endfor %}
+{% endif %}
+
+File: {{ file_name }}
+Language: {{ language }}
+Code:
+{{ code_content }}
+
+Output must be valid JSON following this schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description",
+            "suggestion": "Brief fix suggestion",
+            "cwe_id": "CWE identifier if applicable",
+            "fix": {
+                "before_code": "Vulnerable code snippet",
+                "after_code": "Fixed code snippet",
+                "explanation": "Why this fix works",
+                "references": ["URL to docs"]
+            }
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation"
+    }
+}
+```
+
+**Template Features:**
+- ✅ Conditional sections with `{% if has_frameworks %}`
+- ✅ Loop through examples with `{% for example in few_shot_examples %}`
+- ✅ Variable substitution with `{{ variable }}`
+- ✅ Filters like `{{ language|title }}` for formatting
+- ✅ Must end with JSON schema for structured output
+
+#### Creating a Framework-Specific Template
+
+Create `prompts/frameworks/your_framework.j2`:
+
+```jinja2
+You are an expert {{ framework }} security auditor.
+
+## {{ framework|title }} Security Vulnerabilities
+
+### Framework-Specific Issues
+- List common security issues in this framework
+- Include configuration mistakes
+- Cover framework-specific attack vectors
+
+### {{ framework }} Security Best Practices
+```{{ language }}
+# Secure configuration example
+# Show proper setup
+```
+
+### Common Mistakes
+```{{ language }}
+# Vulnerable code
+# Example of what NOT to do
+```
+
+{% if has_examples %}
+## Framework Security Examples
+{% for example in few_shot_examples %}
+### {{ example.title }}
+{{ example.vulnerable_code }}
+**Fix:** {{ example.fix }}
+{% endfor %}
+{% endif %}
+
+File: {{ file_name }}
+Framework: {{ framework }}
+Code:
+{{ code_content }}
+
+[Include JSON schema here]
+```
+
+#### Creating a Threat Model Template
+
+Create `prompts/threat_models/your_threat.j2`:
+
+```jinja2
+You are a security auditor specializing in {{ threat_model }} threats.
+
+## {{ threat_model|title }} Threat Model
+
+### Attack Vectors
+- Describe specific attack vectors
+- Include exploitation techniques
+- Reference security standards (OWASP, CWE)
+
+### Detection Patterns
+- Code patterns indicating vulnerabilities
+- Configuration mistakes
+- Missing security controls
+
+### Mitigation Strategies
+- How to fix identified issues
+- Security best practices
+- Defense in depth approaches
+
+File: {{ file_name }}
+Language: {{ language }}
+Threat Model: {{ threat_model }}
+Code:
+{{ code_content }}
+
+[Include JSON schema here]
+```
+
+#### Template Best Practices
+
+1. **Always include JSON schema** - Required for structured output
+2. **Use conditional sections** - Check `has_frameworks`, `has_examples`
+3. **Provide specific examples** - Show vulnerable and secure code
+4. **Reference standards** - Link to OWASP, CWE, language docs
+5. **Keep focused** - Template should focus on specific domain
+6. **Use proper escaping** - Use `{% raw %}` for code that looks like Jinja2
+
+**Escaping Template Syntax:**
+
+If your template includes code examples that look like Jinja2 syntax (e.g., Django templates), wrap them in `{% raw %}`:
+
+```jinja2
+### Django Template Security
+```django
+{% raw %}
+{# Correct Django template #}
+<form method="post">
+  {% csrf_token %}
+  {{ form }}
+</form>
+{% endraw %}
+```
+```
+
+This prevents Jinja2 from trying to process Django template tags.
+
+#### Testing Custom Templates
+
+After creating a custom template, test it:
+
+```python
+from prompts.template_engine import PromptEngine
+
+# Test language template
+engine = PromptEngine()
+prompt = engine.get_prompt(
+    language='your_language',
+    code_content='def test(): pass',
+    file_name='test.ext',
+    frameworks=[],
+    threat_models=[],
+    few_shot_examples=[]
+)
+print(prompt)  # Should see your template rendered
+
+# Test framework template
+prompt = engine.get_prompt(
+    language='python',
+    code_content='from your_framework import app',
+    file_name='app.py',
+    frameworks=['your_framework'],
+    threat_models=[],
+    few_shot_examples=[]
+)
+print(prompt)  # Should prioritize framework template
+```
+
+#### Example: Creating a Golang Template
+
+```jinja2
+You are an expert Go security auditor. Analyze the following Go code for security vulnerabilities.
+
+## Go-Specific Security Vulnerabilities
+
+### Memory Safety Issues
+- **Unsafe package usage**: Using `unsafe.Pointer` without proper validation
+- **Race conditions**: Concurrent map access without synchronization
+- **Buffer overflows**: Slice bounds not checked
+
+### Input Validation
+- **SQL Injection**: String concatenation in database queries
+- **Command Injection**: Using `os/exec` with unsanitized input
+- **Path Traversal**: File operations without path sanitization
+
+### Cryptography
+- **Weak random**: Using `math/rand` instead of `crypto/rand`
+- **Weak hashing**: MD5, SHA1 for security purposes
+- **Hardcoded secrets**: API keys in source code
+
+## Secure Go Code Examples
+
+### SQL Injection Prevention
+```go
+// VULNERABLE
+db.Query("SELECT * FROM users WHERE id = " + userID)
+
+// SECURE
+db.Query("SELECT * FROM users WHERE id = $1", userID)
+```
+
+### Command Injection Prevention
+```go
+// VULNERABLE
+exec.Command("sh", "-c", "ls " + userInput)
+
+// SECURE
+exec.Command("ls", userInput)  // Separate arguments
+```
+
+{% if has_frameworks %}
+## Detected Frameworks
+Go frameworks detected: {{ frameworks | join(', ') }}
+{% endif %}
+
+{% if has_examples %}
+## Go Security Examples
+
+{% for example in few_shot_examples %}
+### Example {{ loop.index }}: {{ example.title }}
+**Vulnerable Code:**
+```go
+{{ example.vulnerable_code }}
+```
+
+**Issue:** {{ example.issue }}
+**Fix:** {{ example.fix }}
+
+{% endfor %}
+{% endif %}
+
+File: {{ file_name }}
+Language: Go
+Code:
+{{ code_content }}
+
+JSON Schema:
+{
+    "issues": [
+        {
+            "type": "security|bug|performance|smell",
+            "severity": "high|medium|low",
+            "line": <line_number>,
+            "description": "Clear description with Go-specific context",
+            "suggestion": "Brief one-line suggestion.",
+            "cwe_id": "CWE identifier if applicable",
+            "fix": {
+                "before_code": "Go code showing the vulnerability",
+                "after_code": "Secure Go code following best practices",
+                "explanation": "Detailed explanation referencing Go documentation",
+                "references": ["Optional array of URLs to Go docs, security guides"]
+            }
+        }
+    ],
+    "summary": {
+        "total_issues": <number>,
+        "high_severity": <number>,
+        "medium_severity": <number>,
+        "low_severity": <number>,
+        "maintainability_score": "Score 1-10 with explanation"
+    }
+}
+```
+
+Save this as `prompts/languages/go.j2` and CodeAudit will automatically use it for `.go` files.
+
+#### Template Variables Reference
+
+**Complete list of available variables:**
+
+```python
+{
+    'file_name': 'auth.py',           # File being analyzed
+    'language': 'python',              # Programming language
+    'code_content': '...',             # Full source code
+    'frameworks': ['django'],          # Detected frameworks list
+    'threat_models': ['web_security'], # Active threat models list
+    'few_shot_examples': [             # Vulnerability examples
+        {
+            'title': 'SQL Injection in Django',
+            'vulnerable_code': 'User.objects.raw(f"...")',
+            'issue': 'String interpolation in SQL',
+            'fix': 'Use parameterized queries'
+        }
+    ],
+    'has_frameworks': True,            # Helper boolean
+    'has_examples': True               # Helper boolean
+}
+```
+
+#### Extending the Framework Detector
+
+To add custom framework detection patterns, edit `framework_detector.py`:
+
+```python
+FRAMEWORK_PATTERNS = {
+    'python': {
+        'your_framework': [
+            r'from your_framework import',
+            r'import your_framework',
+        ],
+    },
+}
+
+FRAMEWORK_TO_THREAT_MODEL = {
+    'your_framework': ['web_security', 'custom_threat'],
+}
+```
+
+This makes CodeAudit automatically:
+1. Detect your framework when patterns match
+2. Select your framework template (`frameworks/your_framework.j2`)
+3. Apply relevant threat models
 
 ## Troubleshooting
 
