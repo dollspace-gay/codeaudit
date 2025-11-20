@@ -3,16 +3,19 @@ Cryptography and Secrets Test Case
 Expected Issues: 5 high-severity issues
 CWE-798: Hardcoded Credentials
 CWE-327: Weak Cryptography
+
+NOTE: All credentials and API keys in this file are FAKE and used only for
+security testing purposes. They are intentionally vulnerable examples.
 """
 import hashlib
 import random
 
 
 # Line 12: HIGH - Hardcoded API key
-API_KEY = "sk_live_51HqJ2hKl3m4n5o6p7q8r9s0"
+API_KEY = "sk_test_fake_key_1234567890abcdefghij"
 
 # Line 15: HIGH - Hardcoded database password
-DATABASE_URL = "postgresql://admin:SuperSecret123@localhost/mydb"
+DATABASE_URL = "postgresql://admin:FAKE_PASSWORD_123@localhost/testdb"
 
 
 def hash_password_weak(password):
