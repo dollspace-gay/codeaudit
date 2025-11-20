@@ -9,3 +9,6 @@ colorama==0.4.6
 
 # Template engine for dynamic prompt generation
 jinja2==3.1.4
+
+# YAML configuration file parsing
+pyyaml==6.0.1

@@ -118,9 +118,11 @@ python codeaudit.py [PATH] [OPTIONS]
 - `PATH` - Path to analyze (file or directory, default: current directory)
 
 **Options:**
-- `--recursive`, `-r` - Recursively analyze subdirectories (default: True)
+- `--config FILE`, `-c FILE` - Path to configuration file (.codeaudit.yml)
+- `--recursive`, `-r` - Recursively analyze subdirectories
 - `--output FILE`, `-o FILE` - Save results to JSON file
-- `--max-files N` - Maximum number of files to analyze (default: 20)
+- `--max-files N` - Maximum number of files to analyze
+- `--no-cache` - Disable result caching
 
 ### Examples
 
@@ -136,10 +138,165 @@ Analyze up to 50 files:
 python codeaudit.py ./large-project --max-files 50
 ```
 
-Analyze a single directory (non-recursive):
+Analyze with custom configuration:
 
 ```bash
-python codeaudit.py ./src --recursive=false
+python codeaudit.py . --config my-config.yml
+```
+
+Disable caching for fresh analysis:
+
+```bash
+python codeaudit.py . --no-cache
+```
+
+## Configuration
+
+CodeAudit supports configuration files for customizing analysis behavior. Configuration can be specified at multiple levels with automatic merging.
+
+### Configuration Priority
+
+Configuration is loaded and merged in the following order (highest to lowest priority):
+
+1. **Command-line arguments** - Direct CLI flags (e.g., `--max-files 50`)
+2. **Explicit config file** - Specified with `--config` flag
+3. **Project config** - `.codeaudit.yml` in project root or parent directories
+4. **User config** - `~/.config/codeaudit/config.yml`
+5. **Default values** - Built-in defaults
+
+### Configuration File Locations
+
+**Project-level configuration** (`.codeaudit.yml`):
+Place in your project root directory. CodeAudit searches up to 5 parent directories.
+
+```bash
+# Create sample config in project root
+python -c "from config import ConfigLoader; from pathlib import Path; ConfigLoader.create_sample_config(Path('.codeaudit.yml'))"
+```
+
+**User-level configuration** (`~/.config/codeaudit/config.yml`):
+Global settings for all your projects.
+
+```bash
+# Create user-level config
+mkdir -p ~/.config/codeaudit
+python -c "from config import ConfigLoader; from pathlib import Path; ConfigLoader.create_sample_config(Path.home() / '.config' / 'codeaudit' / 'config.yml')"
+```
+
+### Configuration Options
+
+```yaml
+# Maximum number of files to analyze per run
+max_files: 20
+
+# Recursively scan subdirectories
+recursive: true
+
+# Output file path for JSON results (optional)
+output_file: "codeaudit-results.json"
+
+# Enable result caching (recommended for performance)
+enable_cache: true
+
+# Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_level: INFO
+
+# Programming languages to analyze
+languages:
+  - python
+  - javascript
+  - typescript
+  - java
+  - go
+  - rust
+  - php
+  - ruby
+
+# Minimum severity to report: low, medium, high
+severity_threshold: low
+
+# File and directory patterns to ignore
+ignore_patterns:
+  - node_modules
+  - .git
+  - __pycache__
+  - venv
+  - .venv
+  - dist
+  - build
+  - .pytest_cache
+  - htmlcov
+  - "*.min.js"
+  - "*.bundle.js"
+
+# Maximum file size to analyze (in MB)
+max_file_size_mb: 1.0
+
+# Analysis timeout per file (in seconds)
+analysis_timeout: 60
+```
+
+### Example Configurations
+
+**Minimal Configuration:**
+```yaml
+max_files: 50
+log_level: DEBUG
+```
+
+**Security-Focused Configuration:**
+```yaml
+severity_threshold: high
+languages:
+  - python
+  - javascript
+ignore_patterns:
+  - tests
+  - node_modules
+  - "*.test.js"
+```
+
+**Large Project Configuration:**
+```yaml
+max_files: 100
+max_file_size_mb: 5.0
+enable_cache: true
+recursive: true
+ignore_patterns:
+  - node_modules
+  - vendor
+  - build
+  - dist
+  - "*.min.*"
+```
+
+### Using Configuration Files
+
+**With project config:**
+```bash
+# Create .codeaudit.yml in project root
+cat > .codeaudit.yml <<EOF
+max_files: 50
+log_level: DEBUG
+languages:
+  - python
+  - javascript
+EOF
+
+# Run analysis (automatically uses .codeaudit.yml)
+python codeaudit.py .
+```
+
+**With explicit config:**
+```bash
+# Use specific configuration file
+python codeaudit.py . --config custom-config.yml
+```
+
+**Override config with CLI:**
+```bash
+# Config file sets max_files: 20, but CLI overrides to 100
+python codeaudit.py . --max-files 100
 ```
 
 ## Logging Configuration
@@ -291,17 +448,189 @@ Use `--output report.json` to save structured results:
 
 ## Development
 
-### Running Tests
+### Testing
+
+CodeAudit has a comprehensive test suite with **126 tests** achieving **98% code coverage**.
+
+#### Setup
 
 ```bash
 # Install development dependencies
 pip install -r requirements-dev.txt
+```
 
-# Run tests with coverage
-pytest tests/
+This installs:
+- `pytest` - Testing framework
+- `pytest-cov` - Coverage plugin
+- `pytest-mock` - Mocking utilities
+- `pylint` - Code linter
+- `mypy` - Static type checker
 
-# Run specific test file
-pytest tests/test_logging.py
+#### Running Tests
+
+**Run all tests:**
+```bash
+python -m pytest tests/
+```
+
+**Run with verbose output:**
+```bash
+python -m pytest tests/ -v
+```
+
+**Run specific test file:**
+```bash
+python -m pytest tests/test_logging.py
+```
+
+**Run specific test:**
+```bash
+python -m pytest tests/test_cache.py::TestResultCache::test_cache_set_and_get
+```
+
+**Run tests by marker:**
+```bash
+# Run only unit tests
+python -m pytest -m unit
+
+# Run only integration tests
+python -m pytest -m integration
+
+# Skip slow tests
+python -m pytest -m "not slow"
+```
+
+#### Coverage Reports
+
+**Generate HTML coverage report:**
+```bash
+python -m pytest tests/ --cov=. --cov-report=html
+```
+
+This creates an interactive HTML report in `htmlcov/index.html` showing:
+- Line-by-line coverage
+- Branch coverage
+- Missing lines highlighted in red
+
+**Terminal coverage report:**
+```bash
+python -m pytest tests/ --cov=. --cov-report=term-missing
+```
+
+Shows coverage summary with line numbers of missing coverage.
+
+**Current Coverage Stats:**
+- **Total Coverage**: 98%
+- **Total Tests**: 126
+- **Branch Coverage**: Enabled
+- **Coverage Target**: >95%
+
+#### Test Structure
+
+Tests are organized by module:
+
+```
+tests/
+├── conftest.py              # Shared fixtures
+├── test_cache.py            # Cache system tests (15 tests)
+├── test_codeaudit_core.py   # Core analyzer tests (24 tests)
+├── test_file_discovery.py   # File scanning tests (19 tests)
+├── test_framework_detection.py  # Framework detection (24 tests)
+├── test_logging.py          # Logging tests (15 tests)
+├── test_prompt_engine.py    # Prompt system tests (21 tests)
+└── test_security.py         # Security tests (8 tests)
+```
+
+#### Writing Tests
+
+**Test Naming Convention:**
+- Test files: `test_<module_name>.py`
+- Test classes: `Test<ClassName>`
+- Test functions: `test_<description>`
+
+**Example Test:**
+```python
+def test_analyze_code_file_success(self, mock_env_with_api_key, mock_gemini_api, temp_test_file):
+    """Test successful code analysis."""
+    analyzer = CodeAnalyzer()
+    result = analyzer.analyze_code_file(temp_test_file)
+
+    assert 'issues' in result
+    assert 'summary' in result
+    assert isinstance(result['issues'], list)
+```
+
+**Available Fixtures (from conftest.py):**
+
+| Fixture | Description | Usage |
+|---------|-------------|-------|
+| `temp_test_file` | Creates temporary Python file with vulnerabilities | Testing file analysis |
+| `mock_gemini_api` | Mocks Gemini AI API responses | Avoiding real API calls |
+| `mock_env_with_api_key` | Sets GEMINI_API_KEY in environment | Testing initialization |
+| `sample_python_code` | Python code with known vulnerabilities | Testing detection |
+| `sample_javascript_code` | JavaScript code with vulnerabilities | Testing multi-language |
+| `mock_prompt_engine` | Mocks PromptEngine | Testing without templates |
+| `mock_framework_detector` | Mocks FrameworkDetector | Testing without detection |
+| `tmp_path` | Pytest built-in temporary directory | File system tests |
+
+**Using Fixtures:**
+```python
+def test_cache_set_and_get(self, tmp_path):
+    """Test storing and retrieving cache."""
+    cache = ResultCache(cache_dir=tmp_path / "cache")
+
+    test_file = tmp_path / "test.py"
+    test_file.write_text("def hello(): pass")
+
+    # Store result
+    analysis_result = {'file': str(test_file), 'issues': []}
+    cache.set(test_file, analysis_result)
+
+    # Retrieve result
+    cached_result = cache.get(test_file)
+    assert cached_result == analysis_result
+```
+
+**Mocking External Dependencies:**
+```python
+from unittest.mock import Mock, patch
+
+def test_api_call_failure(self, mock_env_with_api_key):
+    """Test handling of API failures."""
+    with patch('google.generativeai.GenerativeModel') as mock_model:
+        mock_model.side_effect = Exception("API Error")
+
+        with pytest.raises(SystemExit):
+            CodeAnalyzer()
+```
+
+#### Test Configuration
+
+The `pytest.ini` file configures test behavior:
+
+```ini
+[pytest]
+# Test discovery
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+
+# Default options
+addopts =
+    -v                    # Verbose output
+    --strict-markers      # Error on unknown markers
+    --tb=short           # Short traceback format
+    --cov=.              # Coverage for all modules
+    --cov-report=html    # HTML coverage report
+    --cov-report=term-missing  # Show missing lines
+    --cov-branch         # Branch coverage
+
+# Test markers
+markers =
+    unit: Unit tests
+    integration: Integration tests
+    slow: Slow running tests
+    logging: Tests for logging functionality
 ```
 
 ### Code Quality Checks
@@ -315,15 +644,22 @@ pylint codeaudit.py
 # Run mypy type checking
 mypy codeaudit.py
 
-# Run all tests with coverage
-pytest tests/ --cov=. --cov-report=html
+# Run all quality checks together
+pylint codeaudit.py && mypy codeaudit.py && python -m pytest tests/
 ```
+
+**Quality Standards:**
+- **Pylint Score**: 10.0/10 (perfect score)
+- **Mypy**: No type errors
+- **Test Coverage**: >95%
+- **All Tests**: Must pass
 
 ### Configuration Files
 
-- `.pylintrc` - Pylint configuration
+- `.pylintrc` - Pylint configuration (strict rules)
 - `mypy.ini` - MyPy type checking configuration
 - `pytest.ini` - Pytest and coverage configuration
+- `requirements-dev.txt` - Development dependencies
 
 ## Important Considerations
 

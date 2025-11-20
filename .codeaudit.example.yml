@@ -1,0 +1,52 @@
+# CodeAudit Configuration File
+# Place this file as .codeaudit.yml in your project root
+# or ~/.config/codeaudit/config.yml for user-level settings
+
+# Maximum number of files to analyze per run
+max_files: 20
+
+# Recursively scan subdirectories
+recursive: true
+
+# Output file path for JSON results (optional)
+# output_file: "codeaudit-results.json"
+
+# Enable result caching (recommended for performance)
+enable_cache: true
+
+# Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_level: INFO
+
+# Programming languages to analyze
+languages:
+  - python
+  - javascript
+  - typescript
+  - java
+  - go
+  - rust
+  - php
+  - ruby
+
+# Minimum severity to report: low, medium, high
+severity_threshold: low
+
+# File and directory patterns to ignore
+ignore_patterns:
+  - node_modules
+  - .git
+  - __pycache__
+  - venv
+  - .venv
+  - dist
+  - build
+  - .pytest_cache
+  - htmlcov
+  - "*.min.js"
+  - "*.bundle.js"
+
+# Maximum file size to analyze (in MB)
+max_file_size_mb: 1.0
+
+# Analysis timeout per file (in seconds)
+analysis_timeout: 60

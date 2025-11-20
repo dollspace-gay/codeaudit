@@ -18,6 +18,7 @@ from prompts import PromptEngine
 from framework_detector import FrameworkDetector
 from few_shot_examples import FewShotExamples
 from cache import ResultCache
+from config import ConfigLoader, CodeAuditConfig
 
 # Initialize colorama for cross-platform colored output
 init()
@@ -358,7 +359,7 @@ JSON Schema:
         except Exception as e:
             logger.error("Error saving results to %s: %s", output_file, e, exc_info=True)
 
-def validate_output_path(output_path_str: str) -> Optional[Path]:
+def validate_output_path(output_path_str: Optional[str]) -> Optional[Path]:
     """Validate the output path to prevent directory traversal and overwrites."""
     if not output_path_str:
         return None
@@ -396,26 +397,50 @@ Examples:
 
     parser.add_argument('path', nargs='?', default='.',
                        help='Path to analyze (file or directory, default: current directory)')
-    parser.add_argument('--recursive', '-r', action='store_true', default=True,
-                       help='Recursively analyze subdirectories (default: True)')
+    parser.add_argument('--config', '-c', type=str,
+                       help='Path to configuration file (.codeaudit.yml)')
+    parser.add_argument('--recursive', '-r', action='store_true', dest='recursive_flag',
+                       help='Recursively analyze subdirectories')
     parser.add_argument('--output', '-o', type=str,
                        help='Save results to JSON file')
-    parser.add_argument('--max-files', type=int, default=20,
-                       help='Maximum number of files to analyze (default: 20)')
+    parser.add_argument('--max-files', type=int, default=None,
+                       help='Maximum number of files to analyze')
+    parser.add_argument('--no-cache', action='store_true',
+                       help='Disable result caching')
 
     args = parser.parse_args()
 
+    # Load configuration from file(s)
+    try:
+        config_file = Path(args.config) if args.config else None
+        config = ConfigLoader.load(config_file)
+    except Exception as e:
+        logger.error("Failed to load configuration: %s", e)
+        logger.info("Using default configuration")
+        config = CodeAuditConfig()
+
+    # Override config with CLI arguments (CLI takes precedence)
+    if args.max_files is not None:
+        config.max_files = args.max_files
+    if args.recursive_flag:
+        config.recursive = True
+    if args.output:
+        config.output_file = args.output
+    if args.no_cache:
+        config.enable_cache = False
+
     logger.info("Starting CodeAudit analysis")
     logger.info("Target path: %s, recursive: %s, max_files: %s",
-               args.path, args.recursive, args.max_files)
+               args.path, config.recursive, config.max_files)
+    logger.debug("Configuration: %s", config.to_dict())
 
-    validated_output_path = validate_output_path(args.output)
+    validated_output_path = validate_output_path(config.output_file)
 
     logger.info("%s🔍 AI-Powered Code Analyzer%s", Fore.CYAN, Style.RESET_ALL)
     logger.info("Analyzing path: %s", args.path)
 
-    analyzer = CodeAnalyzer()
-    files = analyzer.get_files_to_analyze(args.path, args.recursive)
+    analyzer = CodeAnalyzer(enable_cache=config.enable_cache)
+    files = analyzer.get_files_to_analyze(args.path, config.recursive)
 
     if not files:
         logger.warning("No supported code files found in: %s", args.path)
@@ -423,9 +448,10 @@ Examples:
 
     logger.info("Found %d files to analyze", len(files))
 
-    if len(files) > args.max_files:
-        logger.info("Limiting analysis to first %d files (found %d total)", args.max_files, len(files))
-        files = files[:args.max_files]
+    if len(files) > config.max_files:
+        logger.info("Limiting analysis to first %d files (found %d total)",
+                   config.max_files, len(files))
+        files = files[:config.max_files]
 
     logger.info("Files to analyze: %d", len(files))
 
